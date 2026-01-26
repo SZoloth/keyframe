@@ -5,7 +5,6 @@ import { dirname, join } from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
-import OpenAI from 'openai';
 import { getState, updateState, generateId } from './state.js';
 import type { Character, Frame } from './types.js';
 
@@ -20,11 +19,6 @@ try {
 } catch {
   widgetHtml = '<html><body><h1>Widget not found</h1></body></html>';
 }
-
-// OpenAI client for image generation
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 // Tool input schemas
 const setStyleSchema = {
@@ -42,9 +36,14 @@ const addFrameSchema = {
   caption: z.string().optional(),
 };
 
-const generateFrameImageSchema = {
+const setFrameImageSchema = {
   frameId: z.string().min(1, 'Frame ID is required'),
-  sceneDescription: z.string().min(10, 'Scene description must be at least 10 characters'),
+  imageUrl: z.string().url('Must be a valid URL'),
+};
+
+const updateFrameCaptionSchema = {
+  frameId: z.string().min(1, 'Frame ID is required'),
+  caption: z.string(),
 };
 
 // Helper to create structured content response
@@ -57,7 +56,7 @@ function replyWithState(sessionId: string, message?: string) {
 }
 
 function createKeyframeServer() {
-  const server = new McpServer({ name: 'keyframe', version: '0.1.0' });
+  const server = new McpServer({ name: 'keyframe', version: '0.2.0' });
 
   // Register widget resource
   server.registerResource(
@@ -83,7 +82,7 @@ function createKeyframeServer() {
     'set_style',
     {
       title: 'Set Style',
-      description: 'Set the visual style description for the storyboard. This style will be used for all generated frames.',
+      description: 'Set the visual style description for the storyboard. This style guides how images should be generated.',
       inputSchema: setStyleSchema,
       _meta: {
         'openai/outputTemplate': 'ui://widget/keyframe.html',
@@ -112,7 +111,7 @@ function createKeyframeServer() {
     'add_character',
     {
       title: 'Add Character',
-      description: 'Add a character to the storyboard cast. Characters help maintain visual consistency across frames.',
+      description: 'Add a character to the storyboard cast. Include name, role, and visual description for consistency across frames.',
       inputSchema: addCharacterSchema,
       _meta: {
         'openai/outputTemplate': 'ui://widget/keyframe.html',
@@ -151,7 +150,7 @@ function createKeyframeServer() {
     'add_frame',
     {
       title: 'Add Frame',
-      description: 'Add a new frame to the storyboard. The frame starts empty and can be filled with a generated image.',
+      description: 'Add a new frame to the storyboard. Returns the frame ID which you can use with set_frame_image after generating an image.',
       inputSchema: addFrameSchema,
       _meta: {
         'openai/outputTemplate': 'ui://widget/keyframe.html',
@@ -181,102 +180,129 @@ function createKeyframeServer() {
         frames: [...state.frames, frame],
       });
       
-      return replyWithState(sessionId, `Added frame: ${title}`);
+      return replyWithState(sessionId, `Added frame "${title}" with ID: ${frame.id}. Generate an image and use set_frame_image to attach it.`);
     }
   );
 
-  // Tool: generate_frame_image
+  // Tool: set_frame_image
+  // ChatGPT generates the image, then calls this tool to store it
   server.registerTool(
-    'generate_frame_image',
+    'set_frame_image',
     {
-      title: 'Generate Frame Image',
-      description: 'Generate an image for a specific frame using AI. Uses the storyboard style and character descriptions for consistency.',
-      inputSchema: generateFrameImageSchema,
+      title: 'Set Frame Image',
+      description: 'Attach a generated image to a frame. Use after generating an image with DALL-E. Pass the frame ID and the image URL.',
+      inputSchema: setFrameImageSchema,
       _meta: {
         'openai/outputTemplate': 'ui://widget/keyframe.html',
-        'openai/toolInvocation/invoking': 'Generating image...',
-        'openai/toolInvocation/invoked': 'Image generated',
+        'openai/toolInvocation/invoking': 'Attaching image to frame...',
+        'openai/toolInvocation/invoked': 'Image attached',
       },
     },
     async (args, extra) => {
       const sessionId = extra?.sessionId ?? 'default';
       const frameId = args?.frameId ?? '';
-      const sceneDescription = args?.sceneDescription?.trim() ?? '';
+      const imageUrl = args?.imageUrl ?? '';
       
       const state = getState(sessionId);
       const frameIndex = state.frames.findIndex((f) => f.id === frameId);
       
       if (frameIndex === -1) {
-        return replyWithState(sessionId, `Frame with ID ${frameId} not found.`);
+        return replyWithState(sessionId, `Frame with ID "${frameId}" not found. Available frames: ${state.frames.map(f => `${f.title} (${f.id})`).join(', ')}`);
       }
       
-      if (!sceneDescription || sceneDescription.length < 10) {
-        return replyWithState(sessionId, 'Scene description must be at least 10 characters.');
+      if (!imageUrl) {
+        return replyWithState(sessionId, 'Image URL is required.');
       }
       
-      // Update frame status to generating
       const updatedFrames = [...state.frames];
-      updatedFrames[frameIndex] = { ...updatedFrames[frameIndex], status: 'generating' };
+      updatedFrames[frameIndex] = {
+        ...updatedFrames[frameIndex],
+        imageUrl,
+        status: 'complete',
+      };
       updateState(sessionId, { frames: updatedFrames });
       
-      try {
-        // Build prompt with style and characters
-        const styleContext = state.style.description 
-          ? `Style: ${state.style.description}\n\n` 
-          : '';
-        
-        const characterContext = state.characters.length > 0
-          ? `Characters:\n${state.characters.map((c) => 
-              `- ${c.name} (${c.role}): ${c.visualDescription}`
-            ).join('\n')}\n\n`
-          : '';
-        
-        const prompt = `${styleContext}${characterContext}Scene: ${sceneDescription}
+      return replyWithState(sessionId, `Image attached to frame: ${updatedFrames[frameIndex].title}`);
+    }
+  );
 
-Create a storyboard frame illustration for this scene. The image should be clear, focused, and suitable for a presentation storyboard.`;
-
-        const response = await openai.images.generate({
-          model: 'gpt-image-1',
-          prompt,
-          n: 1,
-          size: '1024x1024',
-        });
-        
-        const imageData = response.data?.[0];
-        if (!imageData) {
-          throw new Error('No image data returned');
-        }
-        
-        const imageUrl = imageData.b64_json 
-          ? `data:image/png;base64,${imageData.b64_json}`
-          : imageData.url ?? '';
-        
-        // Update frame with generated image
-        const finalFrames = [...getState(sessionId).frames];
-        finalFrames[frameIndex] = {
-          ...finalFrames[frameIndex],
-          imageUrl,
-          status: 'complete',
-        };
-        updateState(sessionId, { frames: finalFrames });
-        
-        return replyWithState(sessionId, `Generated image for frame: ${finalFrames[frameIndex].title}`);
-      } catch (error) {
-        // Revert status on error
-        const errorFrames = [...getState(sessionId).frames];
-        errorFrames[frameIndex] = { ...errorFrames[frameIndex], status: 'empty' };
-        updateState(sessionId, { frames: errorFrames });
-        
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        return replyWithState(sessionId, `Failed to generate image: ${message}`);
+  // Tool: update_frame_caption
+  server.registerTool(
+    'update_frame_caption',
+    {
+      title: 'Update Frame Caption',
+      description: 'Update the caption text for a frame.',
+      inputSchema: updateFrameCaptionSchema,
+      _meta: {
+        'openai/outputTemplate': 'ui://widget/keyframe.html',
+        'openai/toolInvocation/invoking': 'Updating caption...',
+        'openai/toolInvocation/invoked': 'Caption updated',
+      },
+    },
+    async (args, extra) => {
+      const sessionId = extra?.sessionId ?? 'default';
+      const frameId = args?.frameId ?? '';
+      const caption = args?.caption ?? '';
+      
+      const state = getState(sessionId);
+      const frameIndex = state.frames.findIndex((f) => f.id === frameId);
+      
+      if (frameIndex === -1) {
+        return replyWithState(sessionId, `Frame with ID "${frameId}" not found.`);
       }
+      
+      const updatedFrames = [...state.frames];
+      updatedFrames[frameIndex] = {
+        ...updatedFrames[frameIndex],
+        caption,
+      };
+      updateState(sessionId, { frames: updatedFrames });
+      
+      return replyWithState(sessionId, `Caption updated for frame: ${updatedFrames[frameIndex].title}`);
+    }
+  );
+
+  // Tool: get_storyboard_summary
+  server.registerTool(
+    'get_storyboard_summary',
+    {
+      title: 'Get Storyboard Summary',
+      description: 'Get a text summary of the current storyboard state including style, characters, and frames.',
+      inputSchema: {},
+      _meta: {
+        'openai/outputTemplate': 'ui://widget/keyframe.html',
+        'openai/toolInvocation/invoking': 'Getting summary...',
+        'openai/toolInvocation/invoked': 'Summary ready',
+      },
+    },
+    async (_args, extra) => {
+      const sessionId = extra?.sessionId ?? 'default';
+      const state = getState(sessionId);
+      
+      const styleSummary = state.style.description 
+        ? `Style: ${state.style.description}` 
+        : 'Style: Not set';
+      
+      const charSummary = state.characters.length > 0
+        ? `Characters (${state.characters.length}):\n${state.characters.map(c => `- ${c.name}: ${c.role}`).join('\n')}`
+        : 'Characters: None';
+      
+      const frameSummary = state.frames.length > 0
+        ? `Frames (${state.frames.length}):\n${state.frames.map((f, i) => 
+            `${i + 1}. ${f.title} [${f.status}] - ID: ${f.id}`
+          ).join('\n')}`
+        : 'Frames: None';
+      
+      const summary = `${styleSummary}\n\n${charSummary}\n\n${frameSummary}`;
+      
+      return replyWithState(sessionId, summary);
     }
   );
 
   return server;
 }
 
-const port = Number(process.env.PORT ?? 8787);
+const port = Number(process.env.PORT ?? 8080);
 const MCP_PATH = '/mcp';
 
 const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -301,7 +327,7 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
 
   // Health check
   if (req.method === 'GET' && url.pathname === '/') {
-    res.writeHead(200, { 'content-type': 'text/plain' }).end('Keyframe MCP server');
+    res.writeHead(200, { 'content-type': 'text/plain' }).end('Keyframe MCP server v0.2.0');
     return;
   }
 
