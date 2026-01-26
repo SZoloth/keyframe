@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Keyframe</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --accent: #18181b;
+      --accent-light: #f4f4f5;
+      --success: #22c55e;
+      --warning: #f59e0b;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    
+    .style-badge {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      background: var(--accent-light);
+      color: var(--text-muted);
+    }
+    
+    .style-badge.active {
+      background: var(--success);
+      color: white;
+    }
+    
+    /* Style Section */
+    .style-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .style-section h3 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    
+    .style-description {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    
+    .style-empty {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    
+    /* Characters Section */
+    .characters-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    
+    .characters-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .characters-header:hover {
+      background: var(--accent-light);
+    }
+    
+    .characters-header h3 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+    
+    .characters-count {
+      font-size: 12px;
+      background: var(--accent-light);
+      padding: 2px 8px;
+      border-radius: 10px;
+      color: var(--text-muted);
+    }
+    
+    .characters-list {
+      display: none;
+      padding: 0 12px 12px;
+    }
+    
+    .characters-list.open {
+      display: block;
+    }
+    
+    .character-item {
+      padding: 8px;
+      background: var(--accent-light);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .character-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .character-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .character-role {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    
+    .character-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+    
+    /* Frames Grid */
+    .frames-section h3 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    
+    .frames-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    
+    .frame-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .frame-image {
+      aspect-ratio: 1;
+      background: var(--accent-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    
+    .frame-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .frame-image.generating {
+      background: linear-gradient(90deg, var(--accent-light) 25%, var(--bg) 50%, var(--accent-light) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    
+    .frame-info {
+      padding: 10px;
+    }
+    
+    .frame-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+    
+    .frame-caption {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    
+    .empty-state-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+    
+    .empty-state p {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <span class="logo">Keyframe</span>
+      <span id="style-badge" class="style-badge">No style set</span>
+    </header>
+    
+    <!-- Style Section -->
+    <section id="style-section" class="style-section" style="display: none;">
+      <h3>Style</h3>
+      <p id="style-description" class="style-description"></p>
+    </section>
+    
+    <!-- Characters Section -->
+    <section id="characters-section" class="characters-section" style="display: none;">
+      <div class="characters-header" onclick="toggleCharacters()">
+        <h3>Cast</h3>
+        <span id="characters-count" class="characters-count">0</span>
+      </div>
+      <div id="characters-list" class="characters-list"></div>
+    </section>
+    
+    <!-- Frames Grid -->
+    <section class="frames-section">
+      <h3>Frames</h3>
+      <div id="frames-grid" class="frames-grid"></div>
+      <div id="empty-state" class="empty-state">
+        <div class="empty-state-icon">🎬</div>
+        <p>No frames yet.<br />Ask ChatGPT to add frames to your storyboard.</p>
+      </div>
+    </section>
+  </div>
+  
+  <script type="module">
+    // State from ChatGPT
+    let state = {
+      style: { description: '', locked: false },
+      characters: [],
+      frames: [],
+    };
+    
+    // Toggle characters list
+    window.toggleCharacters = function() {
+      const list = document.getElementById('characters-list');
+      list.classList.toggle('open');
+    };
+    
+    // Render the UI based on state
+    function render() {
+      // Style badge
+      const badge = document.getElementById('style-badge');
+      const styleSection = document.getElementById('style-section');
+      const styleDesc = document.getElementById('style-description');
+      
+      if (state.style?.description) {
+        badge.textContent = 'Style set';
+        badge.classList.add('active');
+        styleSection.style.display = 'block';
+        styleDesc.textContent = state.style.description.length > 150 
+          ? state.style.description.slice(0, 150) + '...'
+          : state.style.description;
+      } else {
+        badge.textContent = 'No style set';
+        badge.classList.remove('active');
+        styleSection.style.display = 'none';
+      }
+      
+      // Characters
+      const charsSection = document.getElementById('characters-section');
+      const charsCount = document.getElementById('characters-count');
+      const charsList = document.getElementById('characters-list');
+      
+      if (state.characters?.length > 0) {
+        charsSection.style.display = 'block';
+        charsCount.textContent = state.characters.length;
+        charsList.innerHTML = state.characters.map(char => `
+          <div class="character-item">
+            <div class="character-name">${escapeHtml(char.name)}</div>
+            <div class="character-role">${escapeHtml(char.role)}</div>
+            <div class="character-desc">${escapeHtml(char.visualDescription)}</div>
+          </div>
+        `).join('');
+      } else {
+        charsSection.style.display = 'none';
+      }
+      
+      // Frames
+      const grid = document.getElementById('frames-grid');
+      const emptyState = document.getElementById('empty-state');
+      
+      if (state.frames?.length > 0) {
+        emptyState.style.display = 'none';
+        grid.innerHTML = state.frames.map(frame => `
+          <div class="frame-card">
+            <div class="frame-image ${frame.status === 'generating' ? 'generating' : ''}">
+              ${frame.imageUrl 
+                ? `<img src="${escapeHtml(frame.imageUrl)}" alt="${escapeHtml(frame.title)}" />`
+                : frame.status === 'generating' 
+                  ? 'Generating...'
+                  : 'Empty'
+              }
+            </div>
+            <div class="frame-info">
+              <div class="frame-title">${escapeHtml(frame.title)}</div>
+              ${frame.caption ? `<div class="frame-caption">${escapeHtml(frame.caption)}</div>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } else {
+        emptyState.style.display = 'block';
+        grid.innerHTML = '';
+      }
+    }
+    
+    // Escape HTML to prevent XSS
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+    
+    // Update state from tool response
+    function updateFromResponse(response) {
+      if (response?.structuredContent) {
+        state = response.structuredContent;
+        render();
+      }
+    }
+    
+    // Handle globals from ChatGPT
+    function handleSetGlobals(event) {
+      const globals = event.detail?.globals;
+      if (globals?.toolOutput) {
+        state = globals.toolOutput;
+        render();
+      }
+    }
+    
+    // Initialize from window.openai
+    if (window.openai?.toolOutput) {
+      state = window.openai.toolOutput;
+    }
+    
+    // Listen for updates
+    window.addEventListener('openai:set_globals', handleSetGlobals, { passive: true });
+    
+    // Initial render
+    render();
+  </script>
+</body>
+</html>

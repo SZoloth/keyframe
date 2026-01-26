@@ -1,0 +1,301 @@
+{
+  "project": "Keyframe ChatGPT App",
+  "branchName": "compound/chatgpt-app",
+  "description": "Build Keyframe as a ChatGPT app using OpenAI Apps SDK - MCP server with tools + embeddable widget",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Create chatgpt-app directory structure",
+      "description": "Initialize the Node.js project with TypeScript for the MCP server",
+      "acceptanceCriteria": [
+        "Directory chatgpt-app/ exists",
+        "File chatgpt-app/package.json exists with type: module",
+        "File chatgpt-app/tsconfig.json exists with strict: true",
+        "Run `npm install` in chatgpt-app/ - exits with code 0"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Created package.json, tsconfig.json, src/ and public/ directories"
+    },
+    {
+      "id": "T-002",
+      "title": "Install MCP SDK dependencies",
+      "description": "Install @modelcontextprotocol/sdk, zod, and openai packages",
+      "acceptanceCriteria": [
+        "File chatgpt-app/package.json contains @modelcontextprotocol/sdk",
+        "File chatgpt-app/package.json contains zod",
+        "File chatgpt-app/package.json contains openai",
+        "Run `npm ls @modelcontextprotocol/sdk` - shows version installed"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Installed @modelcontextprotocol/sdk@1.20.2, zod@3.25.76, openai@4.77.0"
+    },
+    {
+      "id": "T-003",
+      "title": "Create basic MCP server with health check",
+      "description": "Create server.ts with HTTP server that responds to GET / and handles CORS",
+      "acceptanceCriteria": [
+        "File chatgpt-app/src/server.ts exists",
+        "Server responds to GET / with 200 status",
+        "Server responds to OPTIONS /mcp with CORS headers",
+        "Run `npm run build` in chatgpt-app/ - exits with code 0"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Full MCP server with health check, CORS, and /mcp endpoint"
+    },
+    {
+      "id": "T-004",
+      "title": "Define TypeScript types for storyboard state",
+      "description": "Create types.ts with Character, Frame, Style, and ProjectState interfaces",
+      "acceptanceCriteria": [
+        "File chatgpt-app/src/types.ts exists",
+        "File contains Character interface with: id, name, role, visualDescription",
+        "File contains Frame interface with: id, title, caption, imageUrl, status",
+        "File contains ProjectState interface with: style, characters, frames arrays",
+        "Run `npm run typecheck` in chatgpt-app/ - exits with code 0"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Types include Character, Frame, StyleDefinition, ProjectState with index signature"
+    },
+    {
+      "id": "T-005",
+      "title": "Implement session-based state store",
+      "description": "Create state.ts with in-memory state management per session",
+      "acceptanceCriteria": [
+        "File chatgpt-app/src/state.ts exists",
+        "Export function getState(sessionId) returns ProjectState",
+        "Export function updateState(sessionId, updates) updates state",
+        "Export function resetState(sessionId) clears session state",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Session-based Map store with getState, updateState, resetState, generateId"
+    },
+    {
+      "id": "T-006",
+      "title": "Register set_style tool with MCP server",
+      "description": "Add set_style tool that accepts style description and stores it",
+      "acceptanceCriteria": [
+        "Tool registered with name set_style",
+        "Input schema validates style: string (min 10 chars)",
+        "Tool stores style in session state",
+        "Tool returns structuredContent with current state",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Registered with zod validation, returns structuredContent"
+    },
+    {
+      "id": "T-007",
+      "title": "Register add_character tool with MCP server",
+      "description": "Add add_character tool that creates a character and adds to cast",
+      "acceptanceCriteria": [
+        "Tool registered with name add_character",
+        "Input schema validates: name, role, visualDescription (all strings)",
+        "Tool generates unique ID for character",
+        "Tool adds character to session state characters array",
+        "Tool returns structuredContent with updated state",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Uses generateId() for unique character IDs"
+    },
+    {
+      "id": "T-008",
+      "title": "Register add_frame tool with MCP server",
+      "description": "Add add_frame tool that creates an empty frame placeholder",
+      "acceptanceCriteria": [
+        "Tool registered with name add_frame",
+        "Input schema validates: title (string), caption (string, optional)",
+        "Tool creates frame with empty imageUrl and status 'empty'",
+        "Tool adds frame to session state frames array",
+        "Tool returns structuredContent with updated state",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Frame created with status 'empty', optional caption"
+    },
+    {
+      "id": "T-009",
+      "title": "Register generate_frame_image tool with MCP server",
+      "description": "Add tool that generates image using OpenAI API and updates frame",
+      "acceptanceCriteria": [
+        "Tool registered with name generate_frame_image",
+        "Input schema validates: frameId (string), sceneDescription (string)",
+        "Tool calls OpenAI images.generate API with gpt-image-1 model",
+        "Tool updates frame imageUrl with generated image",
+        "Tool updates frame status to 'complete'",
+        "Tool returns structuredContent with updated state",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Includes style and character context in prompt, handles b64_json and url responses"
+    },
+    {
+      "id": "T-010",
+      "title": "Create widget HTML shell",
+      "description": "Create keyframe-widget.html with basic layout structure",
+      "acceptanceCriteria": [
+        "File chatgpt-app/public/keyframe-widget.html exists",
+        "HTML contains header with 'Keyframe' title",
+        "HTML contains main element for frame grid",
+        "HTML contains inline styles (no external CSS)",
+        "HTML includes script tag with type=module"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Complete widget with header, style section, characters section, and frames grid"
+    },
+    {
+      "id": "T-011",
+      "title": "Implement widget state reading from window.openai",
+      "description": "Add JavaScript to read state from window.openai.toolOutput",
+      "acceptanceCriteria": [
+        "Widget script reads window.openai?.toolOutput on load",
+        "Widget script listens for openai:set_globals event",
+        "State (style, characters, frames) extracted from toolOutput",
+        "render() function called when state changes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Full state management with updateFromResponse and handleSetGlobals"
+    },
+    {
+      "id": "T-012",
+      "title": "Implement widget frame grid rendering",
+      "description": "Render frames as a responsive grid with images or placeholders",
+      "acceptanceCriteria": [
+        "Frame grid displays in 2-3 column layout",
+        "Empty frames show placeholder with title",
+        "Completed frames show generated image",
+        "Caption visible below each frame",
+        "Grid responds to state updates"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "CSS Grid 2-column layout, shimmer animation for generating state"
+    },
+    {
+      "id": "T-013",
+      "title": "Implement widget character list display",
+      "description": "Show cast of characters in collapsible section",
+      "acceptanceCriteria": [
+        "Characters section visible in widget",
+        "Each character shows name and role",
+        "Section is collapsible (click to expand/collapse)",
+        "Visual description shows on expand"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Collapsible section with toggleCharacters() function"
+    },
+    {
+      "id": "T-014",
+      "title": "Implement widget style indicator",
+      "description": "Show current style status with badge and description preview",
+      "acceptanceCriteria": [
+        "Style section visible at top of widget",
+        "Badge shows 'No style' when style is empty",
+        "Badge shows 'Style set' when style exists",
+        "First 100 chars of style description shown when set"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "Badge in header, expandable style section below"
+    },
+    {
+      "id": "T-015",
+      "title": "Register widget as MCP resource",
+      "description": "Register keyframe-widget.html as UI resource with MCP server",
+      "acceptanceCriteria": [
+        "Resource registered with uri ui://widget/keyframe.html",
+        "Resource returns HTML content with mimeType text/html+skybridge",
+        "Resource includes openai/widgetPrefersBorder: true in _meta",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Registered with server.registerResource()"
+    },
+    {
+      "id": "T-016",
+      "title": "Add outputTemplate to all tools",
+      "description": "Configure tools to render widget after execution",
+      "acceptanceCriteria": [
+        "All tools have _meta.openai/outputTemplate: ui://widget/keyframe.html",
+        "All tools have _meta.openai/toolInvocation/invoking message",
+        "All tools have _meta.openai/toolInvocation/invoked message",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "All 4 tools have outputTemplate and invocation messages"
+    },
+    {
+      "id": "T-017",
+      "title": "Add npm scripts for development",
+      "description": "Add dev, build, and typecheck scripts to package.json",
+      "acceptanceCriteria": [
+        "npm run dev starts server with tsx watch",
+        "npm run build compiles TypeScript",
+        "npm run typecheck runs tsc --noEmit",
+        "npm run start runs compiled server"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "All scripts configured in package.json"
+    },
+    {
+      "id": "T-018",
+      "title": "Create README with setup instructions",
+      "description": "Document how to run locally and connect to ChatGPT",
+      "acceptanceCriteria": [
+        "File chatgpt-app/README.md exists",
+        "README contains Prerequisites section",
+        "README contains Local Development section with npm commands",
+        "README contains ChatGPT Connection section with ngrok instructions"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "Complete README with prerequisites, setup, and ChatGPT connection"
+    },
+    {
+      "id": "T-019",
+      "title": "Test MCP server with MCP Inspector",
+      "description": "Verify server works with the MCP Inspector tool",
+      "acceptanceCriteria": [
+        "Start server with npm run dev",
+        "Run npx @modelcontextprotocol/inspector --server-url http://localhost:8787/mcp --transport http",
+        "Inspector shows set_style tool",
+        "Inspector shows add_character tool",
+        "Inspector shows add_frame tool",
+        "Inspector shows generate_frame_image tool"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": "Requires manual testing with running server"
+    },
+    {
+      "id": "T-020",
+      "title": "Add environment variable configuration",
+      "description": "Support OPENAI_API_KEY and PORT from environment",
+      "acceptanceCriteria": [
+        "Server reads OPENAI_API_KEY from process.env",
+        "Server reads PORT from process.env (default 8787)",
+        "File chatgpt-app/.env.example exists with OPENAI_API_KEY=",
+        "File chatgpt-app/.gitignore includes .env"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": ".env.example and .gitignore created, server uses process.env"
+    }
+  ]
+}

@@ -13,8 +13,8 @@
         "Run `npm run typecheck` - exits with code 0"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented with StyleMode type and localStorage persistence"
     },
     {
       "id": "T-002",
@@ -29,8 +29,8 @@
         "Navigate to http://localhost:3000 - toggle buttons visible in Style tab"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Segmented control with bg-zinc-100 container and active state styling"
     },
     {
       "id": "T-003",
@@ -44,8 +44,8 @@
         "Navigate to http://localhost:3000 - toggle hides/shows upload section"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wrapped upload section in mode === 'upload' conditional"
     },
     {
       "id": "T-004",
@@ -60,8 +60,8 @@
         "Navigate to http://localhost:3000 - textarea visible in Describe mode"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "descriptionInput state with helper text explaining style elements"
     },
     {
       "id": "T-005",
@@ -76,8 +76,8 @@
         "Navigate to http://localhost:3000 - button enables when text entered"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Button with disabled={generating || !descriptionInput.trim()}"
     },
     {
       "id": "T-006",
@@ -92,8 +92,8 @@
         "Run `npm run typecheck` - exits with code 0"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added to openai.ts with style demonstration prompt"
     },
     {
       "id": "T-007",
@@ -107,8 +107,8 @@
         "Run `npm run lint` - exits with code 0"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "generating state controls button text and disabled states"
     },
     {
       "id": "T-008",
@@ -122,8 +122,8 @@
         "Run `npm run typecheck` - exits with code 0"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "handleGenerateReference function handles API call and state"
     },
     {
       "id": "T-009",
@@ -137,8 +137,8 @@
         "Navigate to http://localhost:3000 - generated image displays after API call"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Image with w-full rounded-lg border styling"
     },
     {
       "id": "T-010",
@@ -153,8 +153,8 @@
         "Navigate to http://localhost:3000 - buttons visible after image generates"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Accept green, Try Again bordered, conditional render"
     },
     {
       "id": "T-011",
@@ -168,8 +168,8 @@
         "Run `npm run lint` - exits with code 0"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Try Again calls handleGenerateReference which uses current descriptionInput"
     },
     {
       "id": "T-012",
@@ -182,8 +182,8 @@
         "Run `npm run typecheck` - exits with code 0"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "handleAcceptGenerated adds to store and clears local state"
     },
     {
       "id": "T-013",
@@ -197,8 +197,8 @@
         "Navigate to http://localhost:3000 - accept → auto-analysis → description shows"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "handleAcceptGenerated includes inline style analysis call"
     },
     {
       "id": "T-014",
@@ -212,8 +212,8 @@
         "Run `npm run lint` - exits with code 0"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "generateError state with text-red-500 styling, cleared on new generation"
     },
     {
       "id": "T-015",
@@ -231,7 +231,7 @@
       ],
       "priority": 15,
       "passes": false,
-      "notes": ""
+      "notes": "Requires manual browser testing with API key"
     }
   ]
 }
