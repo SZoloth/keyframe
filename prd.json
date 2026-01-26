@@ -1,0 +1,237 @@
+{
+  "project": "Keyframe",
+  "branchName": "compound/describe-mode",
+  "description": "Add Describe Mode to let users generate style references from text descriptions instead of uploading sketches",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "Add mode toggle state to StyleTab component",
+      "description": "Add useState for mode selection between 'upload' and 'describe' modes",
+      "acceptanceCriteria": [
+        "File src/components/sidebar/StyleTab.tsx contains useState<'upload' | 'describe'>",
+        "Default value is 'upload'",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-002",
+      "title": "Render mode toggle UI at top of StyleTab",
+      "description": "Add segmented control UI to switch between Upload and Describe modes",
+      "acceptanceCriteria": [
+        "Two buttons labeled 'Upload' and 'Describe' appear at top of StyleTab",
+        "Active mode button has bg-zinc-900 text-white styling",
+        "Inactive mode button has border styling",
+        "Clicking toggles the mode state",
+        "Run `npm run lint` - exits with code 0",
+        "Navigate to http://localhost:3000 - toggle buttons visible in Style tab"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-003",
+      "title": "Conditionally render Upload UI based on mode",
+      "description": "Show existing upload UI only when mode is 'upload'",
+      "acceptanceCriteria": [
+        "Upload section (file input, thumbnails) only visible when mode === 'upload'",
+        "Selecting 'Describe' mode hides upload UI",
+        "Selecting 'Upload' mode shows upload UI",
+        "Run `npm run lint` - exits with code 0",
+        "Navigate to http://localhost:3000 - toggle hides/shows upload section"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-004",
+      "title": "Add Describe mode textarea UI",
+      "description": "Create textarea and helper text for describing visual style",
+      "acceptanceCriteria": [
+        "Textarea visible when mode === 'describe'",
+        "Placeholder text: 'Describe your desired visual style...'",
+        "Helper text explains: line quality, colors, shading, mood",
+        "Textarea has controlled state (useState)",
+        "Run `npm run lint` - exits with code 0",
+        "Navigate to http://localhost:3000 - textarea visible in Describe mode"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-005",
+      "title": "Add Generate Reference button",
+      "description": "Add button below textarea to trigger style reference generation",
+      "acceptanceCriteria": [
+        "Button with text 'Generate Reference' appears below textarea",
+        "Button disabled when textarea is empty",
+        "Button enabled when textarea has content",
+        "Button uses bg-zinc-900 text-white styling",
+        "Run `npm run lint` - exits with code 0",
+        "Navigate to http://localhost:3000 - button enables when text entered"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-006",
+      "title": "Create generateStyleReference function in openai.ts",
+      "description": "Add new function to generate a style reference image from text description",
+      "acceptanceCriteria": [
+        "File src/lib/openai.ts contains export async function generateStyleReference",
+        "Function accepts (client: OpenAI, description: string) parameters",
+        "Function returns Promise<string> (base64 image data)",
+        "Function uses gpt-image-1 model",
+        "Prompt instructs: single reference sketch demonstrating the described style",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-007",
+      "title": "Add generation loading state",
+      "description": "Add useState for loading state during image generation",
+      "acceptanceCriteria": [
+        "StyleTab has useState<boolean> for generating state",
+        "Button shows 'Generating...' text when generating === true",
+        "Button disabled when generating === true",
+        "Textarea disabled when generating === true",
+        "Run `npm run lint` - exits with code 0"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-008",
+      "title": "Connect Generate button to API",
+      "description": "Wire up button click to call generateStyleReference and store result",
+      "acceptanceCriteria": [
+        "Clicking Generate Reference calls generateStyleReference with textarea value",
+        "Sets generating state to true before call",
+        "Sets generating state to false after call completes",
+        "Stores successful result in local state (generatedImage)",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-009",
+      "title": "Display generated reference image",
+      "description": "Show the generated image after successful generation",
+      "acceptanceCriteria": [
+        "Generated image displays below textarea when generatedImage is set",
+        "Image has max-width and rounded styling",
+        "Image visible in Describe mode section",
+        "Run `npm run lint` - exits with code 0",
+        "Navigate to http://localhost:3000 - generated image displays after API call"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-010",
+      "title": "Add Accept and Try Again buttons",
+      "description": "Add action buttons below generated image for user decision",
+      "acceptanceCriteria": [
+        "Two buttons appear below generated image: 'Accept' and 'Try Again'",
+        "'Accept' button uses bg-green-600 text-white styling",
+        "'Try Again' button uses border styling",
+        "Buttons only visible when generatedImage is set",
+        "Run `npm run lint` - exits with code 0",
+        "Navigate to http://localhost:3000 - buttons visible after image generates"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-011",
+      "title": "Implement Try Again functionality",
+      "description": "Try Again button triggers new generation with same description",
+      "acceptanceCriteria": [
+        "Clicking 'Try Again' calls generateStyleReference again",
+        "Uses current textarea value (not previous)",
+        "Shows loading state during regeneration",
+        "New image replaces previous generatedImage",
+        "Run `npm run lint` - exits with code 0"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-012",
+      "title": "Implement Accept functionality - add to store",
+      "description": "Accept button adds generated image to style.referenceImages in store",
+      "acceptanceCriteria": [
+        "Clicking 'Accept' calls addReferenceImage(generatedImage) from store",
+        "After accept, image appears in reference images display",
+        "generatedImage state cleared after accept",
+        "Run `npm run typecheck` - exits with code 0"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-013",
+      "title": "Auto-trigger style analysis after Accept",
+      "description": "After accepting generated image, automatically analyze its style",
+      "acceptanceCriteria": [
+        "Accept triggers existing analyzeStyle function automatically",
+        "Style description populates from analysis",
+        "User sees style description textarea after analysis completes",
+        "Run `npm run lint` - exits with code 0",
+        "Navigate to http://localhost:3000 - accept → auto-analysis → description shows"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-014",
+      "title": "Add error handling for generation failures",
+      "description": "Handle API errors gracefully with user feedback",
+      "acceptanceCriteria": [
+        "Failed generation shows error message below textarea",
+        "Error message is red text (text-red-500)",
+        "Error clears when user starts new generation",
+        "Button returns to enabled state after error",
+        "Run `npm run lint` - exits with code 0"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "T-015",
+      "title": "Test complete describe mode flow",
+      "description": "Verify full flow from text input to locked style",
+      "acceptanceCriteria": [
+        "Navigate to http://localhost:3000 - connect API key",
+        "Select template, go to Style phase",
+        "Switch to Describe mode",
+        "Enter style description: 'Bold black ink sketch style with cross-hatching'",
+        "Click Generate Reference - image appears",
+        "Click Accept - style analysis runs",
+        "Edit description if needed, click Lock Style",
+        "Proceed to Cast phase successfully"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

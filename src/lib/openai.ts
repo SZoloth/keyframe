@@ -133,3 +133,31 @@ Provide an updated scene description that incorporates the feedback. Keep it to 
   
   return response.choices[0]?.message?.content || currentScene;
 }
+
+// Generate a style reference image from text description
+export async function generateStyleReference(
+  client: OpenAI,
+  description: string
+): Promise<string> {
+  const prompt = `Generate a single reference sketch that demonstrates this visual style:
+
+${description}
+
+This image will be used as a style reference for a storyboard. Create a simple scene that clearly shows: line quality, shading technique, level of detail, and overall aesthetic. The image should be a clear demonstration of the described artistic style.`;
+
+  const response = await client.images.generate({
+    model: 'gpt-image-1',
+    prompt,
+    n: 1,
+    size: '1024x1024',
+  });
+
+  const imageData = response.data?.[0];
+  if (!imageData) {
+    throw new Error('No image data returned from API');
+  }
+  if (imageData.b64_json) {
+    return `data:image/png;base64,${imageData.b64_json}`;
+  }
+  return imageData.url || '';
+}
