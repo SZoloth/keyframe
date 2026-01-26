@@ -2,6 +2,10 @@
 
 AI-powered storyboard generator for pitching products and concepts.
 
+**[Try it live →](https://keyframe-app.netlify.app)**
+
+![Keyframe Screenshot](https://via.placeholder.com/800x450?text=Keyframe+Screenshot)
+
 ## What is this?
 
 Keyframe implements the "keyframe model" for AI-assisted storyboard creation:
@@ -11,74 +15,68 @@ Keyframe implements the "keyframe model" for AI-assisted storyboard creation:
 3. **Generate frames** - AI creates remaining frames matching your style
 4. **Export PDF** - Professional storyboard ready for stakeholder presentations
 
-Based on the workflow described by Dave McMahon at Amdocs, who used this approach to pitch AI initiatives to Chick-fil-A. The entire visual production took half a day.
+Based on the workflow described by Dave McMahon, who used this approach to pitch AI initiatives to Chick-fil-A. The entire visual production took half a day.
 
-## Key Features
+## Features
 
-- **Storytelling templates** - Raskin Pitch, Hero's Journey, Problem→Solution
+- **Storytelling templates** - Raskin Pitch, Hero's Journey, Problem→Solution, or Freeform
 - **Style lock** - Upload sketches, AI analyzes and maintains consistency
 - **Character persistence** - Define once, referenced in every frame
-- **Generative UI chat** - Cursor-like interface with structured inputs
+- **Iterative generation** - Refine scenes via chat before generating
 - **PDF export** - Frames + captions ready for presentation
 
-## Tech Stack
-
-- **Next.js 15** - App Router, React Server Components
-- **tldraw** - Infinite canvas for frame layout
-- **Vercel AI SDK 6** - Streaming chat with generative UI
-- **GPT-4o** - Image generation with better consistency than DALL-E 3
-- **@react-pdf/renderer** - High-quality PDF export
-- **Zustand** - Lightweight state management
-
-## Getting Started
+## Quick Start
 
 ```bash
+# Clone the repo
+git clone https://github.com/SZoloth/keyframe.git
+cd keyframe
+
 # Install dependencies
 npm install
 
-# Run development server
+# Start dev server
 npm run dev
 
 # Open http://localhost:3000
 ```
 
-You'll need an OpenAI API key with access to GPT-4o.
+You'll need an OpenAI API key with GPT-4o access.
+
+## Tech Stack
+
+- **Next.js 15** - App Router, React Server Components
+- **TypeScript** - Strict mode
+- **Tailwind CSS** - Styling
+- **Zustand** - State management with localStorage persistence
+- **OpenAI GPT-4o** - Style analysis and image generation
+- **@react-pdf/renderer** - PDF export
 
 ## Project Structure
 
 ```
 keyframe/
-├── app/
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── api/
-│       └── chat/
-│           └── route.ts
-├── components/
-│   ├── canvas/
-│   │   └── StoryboardCanvas.tsx
-│   ├── chat/
-│   │   ├── ChatPanel.tsx
-│   │   └── GenerativeUI.tsx
-│   ├── cast/
-│   │   └── CastPanel.tsx
-│   ├── style/
-│   │   └── StylePanel.tsx
-│   └── export/
-│       └── PDFExport.tsx
-├── lib/
-│   ├── store.ts
-│   ├── templates.ts
-│   ├── openai.ts
-│   └── prompts.ts
+├── src/
+│   ├── app/                 # Next.js pages
+│   ├── components/
+│   │   ├── canvas/          # Storyboard grid
+│   │   ├── sidebar/         # Chat, Cast, Style tabs
+│   │   └── export/          # PDF generation
+│   └── lib/
+│       ├── store.ts         # Zustand store
+│       ├── templates.ts     # Storytelling frameworks
+│       ├── openai.ts        # API calls
+│       └── types.ts         # TypeScript interfaces
 ├── tasks/
-│   └── prd-keyframe-mvp.md
+│   ├── prd-keyframe-mvp.md  # Original PRD
+│   └── backlog.md           # Post-MVP features
 └── README.md
 ```
 
 ## Templates
 
 ### Raskin Pitch (5 frames)
+Andy Raskin's proven pitch structure:
 1. The Old World - Status quo
 2. The Shift - External change
 3. Winners & Losers - Contrast
@@ -86,26 +84,26 @@ keyframe/
 5. Proof - Evidence it works
 
 ### Hero's Journey (8 frames)
-1. Ordinary World
-2. Call to Adventure
-3. Refusal
-4. Meeting the Mentor
-5. Crossing Threshold
-6. Tests & Allies
-7. Ordeal
-8. Return with Elixir
+Classic narrative arc for customer stories.
 
 ### Problem → Solution (3 frames)
-1. Before - Frustration
-2. During - Solution in action
-3. After - Outcome
+Quick and effective: Before → During → After
+
+### Freeform
+Create your own structure. Add/remove frames as needed.
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+Check [tasks/backlog.md](./tasks/backlog.md) for post-MVP features to work on.
 
 ## Inspiration
 
 > "The people who are actually deciding whether to pursue these things or not, they don't give a shit what the technology is. They hire someone to give a shit about the technology. What they want to know is how is this going to improve the actual experience of anybody involved."
 > 
-> — Dave McMahon, Amdocs
+> — Dave McMahon
 
 ## License
 
-MIT
+MIT - see [LICENSE](./LICENSE)
