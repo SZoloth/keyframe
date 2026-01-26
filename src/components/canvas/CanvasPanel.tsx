@@ -12,9 +12,14 @@ export function CanvasPanel() {
   const updateFrame = useStore(state => state.updateFrame);
   const addFrame = useStore(state => state.addFrame);
   const removeFrame = useStore(state => state.removeFrame);
+  const reorderFrames = useStore(state => state.reorderFrames);
   
   const [editingCaptionId, setEditingCaptionId] = useState<string | null>(null);
   const [captionInput, setCaptionInput] = useState('');
+  
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   
   const isFreeform = selectedTemplateId === 'freeform';
   const canEditFrames = isFreeform && currentPhase === 'frames';
@@ -61,11 +66,55 @@ export function CanvasPanel() {
     }
   };
   
+  // Drag handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+  
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dropTargetIndex !== index) {
+      setDropTargetIndex(index);
+    }
+  };
+  
+  const handleDragLeave = () => {
+    setDropTargetIndex(null);
+  };
+  
+  const handleDrop = (e: React.DragEvent, toIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== toIndex) {
+      reorderFrames(draggedIndex, toIndex);
+    }
+    setDraggedIndex(null);
+    setDropTargetIndex(null);
+  };
+  
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDropTargetIndex(null);
+  };
+  
   return (
     <div className="flex-1 bg-zinc-50 p-8 overflow-auto">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
         {frames.map((frame, index) => (
-          <div key={frame.id} className="flex flex-col group">
+          <div 
+            key={frame.id} 
+            className={`flex flex-col group transition-opacity ${
+              draggedIndex === index ? 'opacity-50' : 'opacity-100'
+            }`}
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
+          >
             <div className="relative">
               <button
                 onClick={() => selectFrame(frame.id)}
@@ -77,6 +126,10 @@ export function CanvasPanel() {
                     : 'border-zinc-200 bg-white hover:border-zinc-400'
                   }
                   ${frame.status === 'complete' ? 'ring-2 ring-green-500 ring-offset-2' : ''}
+                  ${dropTargetIndex === index && draggedIndex !== index 
+                    ? 'border-blue-500 border-2' 
+                    : ''
+                  }
                 `}
               >
                 {frame.imageUrl ? (

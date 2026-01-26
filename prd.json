@@ -1,237 +1,170 @@
 {
   "project": "Keyframe",
-  "branchName": "compound/describe-mode",
-  "description": "Add Describe Mode to let users generate style references from text descriptions instead of uploading sketches",
+  "branchName": "compound/frame-rearranging",
+  "description": "Add drag-and-drop reordering of frames on the canvas",
   "tasks": [
     {
       "id": "T-001",
-      "title": "Add mode toggle state to StyleTab component",
-      "description": "Add useState for mode selection between 'upload' and 'describe' modes",
+      "title": "Add reorderFrames action to Zustand store",
+      "description": "Add action to reorder frames array by moving a frame from one index to another",
       "acceptanceCriteria": [
-        "File src/components/sidebar/StyleTab.tsx contains useState<'upload' | 'describe'>",
-        "Default value is 'upload'",
+        "File src/lib/store.ts contains reorderFrames: (fromIndex: number, toIndex: number) action",
+        "Action uses splice to remove from source and insert at destination",
         "Run `npm run typecheck` - exits with code 0"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Verified: StyleMode type, localStorage persistence, build passes"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-002",
-      "title": "Render mode toggle UI at top of StyleTab",
-      "description": "Add segmented control UI to switch between Upload and Describe modes",
+      "title": "Add drag state to CanvasPanel",
+      "description": "Add useState hooks to track drag source and drop target",
       "acceptanceCriteria": [
-        "Two buttons labeled 'Upload' and 'Describe' appear at top of StyleTab",
-        "Active mode button has bg-zinc-900 text-white styling",
-        "Inactive mode button has border styling",
-        "Clicking toggles the mode state",
-        "Run `npm run lint` - exits with code 0",
-        "Navigate to http://localhost:3001 - toggle buttons visible in Style tab"
+        "CanvasPanel has useState<number | null> for draggedIndex",
+        "CanvasPanel has useState<number | null> for dropTargetIndex",
+        "Run `npm run typecheck` - exits with code 0"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Browser verified: Toggle visible, active state styling correct, switches modes"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-003",
-      "title": "Conditionally render Upload UI based on mode",
-      "description": "Show existing upload UI only when mode is 'upload'",
+      "title": "Add draggable attribute to frame cards",
+      "description": "Make frame card divs draggable",
       "acceptanceCriteria": [
-        "Upload section (file input, thumbnails) only visible when mode === 'upload'",
-        "Selecting 'Describe' mode hides upload UI",
-        "Selecting 'Upload' mode shows upload UI",
-        "Run `npm run lint` - exits with code 0",
-        "Navigate to http://localhost:3001 - toggle hides/shows upload section"
+        "Frame card wrapper div has draggable={true} attribute",
+        "Run `npm run lint` - exits with code 0"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Browser verified: Upload UI hides when Describe selected, shows when Upload selected"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-004",
-      "title": "Add Describe mode textarea UI",
-      "description": "Create textarea and helper text for describing visual style",
+      "title": "Implement onDragStart handler",
+      "description": "Set drag source index and visual feedback when drag begins",
       "acceptanceCriteria": [
-        "Textarea visible when mode === 'describe'",
-        "Placeholder text: 'Describe your desired visual style...'",
-        "Helper text explains: line quality, colors, shading, mood",
-        "Textarea has controlled state (useState)",
-        "Run `npm run lint` - exits with code 0",
-        "Navigate to http://localhost:3001 - textarea visible in Describe mode"
+        "onDragStart handler sets draggedIndex to frame's index",
+        "Handler sets e.dataTransfer.effectAllowed = 'move'",
+        "Run `npm run lint` - exits with code 0"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Browser verified: Textarea visible with correct placeholder and helper text"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-005",
-      "title": "Add Generate Reference button",
-      "description": "Add button below textarea to trigger style reference generation",
+      "title": "Implement onDragOver handler",
+      "description": "Allow dropping and track drop target",
       "acceptanceCriteria": [
-        "Button with text 'Generate Reference' appears below textarea",
-        "Button disabled when textarea is empty",
-        "Button enabled when textarea has content",
-        "Button uses bg-zinc-900 text-white styling",
-        "Run `npm run lint` - exits with code 0",
-        "Navigate to http://localhost:3001 - button enables when text entered"
+        "onDragOver calls e.preventDefault() to allow drop",
+        "onDragOver sets dropTargetIndex to hovered frame's index",
+        "Handler only updates if index different from current dropTarget",
+        "Run `npm run lint` - exits with code 0"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Browser verified: Button disabled when empty, enabled after entering text"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-006",
-      "title": "Create generateStyleReference function in openai.ts",
-      "description": "Add new function to generate a style reference image from text description",
+      "title": "Implement onDragLeave handler",
+      "description": "Clear drop target when leaving frame",
       "acceptanceCriteria": [
-        "File src/lib/openai.ts contains export async function generateStyleReference",
-        "Function accepts (client: OpenAI, description: string) parameters",
-        "Function returns Promise<string> (base64 image data)",
-        "Function uses gpt-image-1 model",
-        "Prompt instructs: single reference sketch demonstrating the described style",
-        "Run `npm run typecheck` - exits with code 0"
+        "onDragLeave clears dropTargetIndex to null",
+        "Run `npm run lint` - exits with code 0"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "Code verified: Function exists with correct signature, build passes"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-007",
-      "title": "Add generation loading state",
-      "description": "Add useState for loading state during image generation",
+      "title": "Implement onDrop handler",
+      "description": "Complete reorder when frame is dropped",
       "acceptanceCriteria": [
-        "StyleTab has useState<boolean> for generating state",
-        "Button shows 'Generating...' text when generating === true",
-        "Button disabled when generating === true",
-        "Textarea disabled when generating === true",
+        "onDrop calls reorderFrames(draggedIndex, dropIndex)",
+        "onDrop clears draggedIndex and dropTargetIndex",
+        "Reorder only happens if draggedIndex !== dropTargetIndex",
         "Run `npm run lint` - exits with code 0"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": "Code verified: generating state controls button text and disabled states"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-008",
-      "title": "Connect Generate button to API",
-      "description": "Wire up button click to call generateStyleReference and store result",
+      "title": "Implement onDragEnd cleanup",
+      "description": "Clean up drag state when drag ends or is cancelled",
       "acceptanceCriteria": [
-        "Clicking Generate Reference calls generateStyleReference with textarea value",
-        "Sets generating state to true before call",
-        "Sets generating state to false after call completes",
-        "Stores successful result in local state (generatedImage)",
-        "Run `npm run typecheck` - exits with code 0"
+        "onDragEnd clears draggedIndex to null",
+        "onDragEnd clears dropTargetIndex to null",
+        "Works for both successful drop and cancelled drag",
+        "Run `npm run lint` - exits with code 0"
       ],
       "priority": 8,
-      "passes": true,
-      "notes": "Code verified: handleGenerateReference function wired to button onClick"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-009",
-      "title": "Display generated reference image",
-      "description": "Show the generated image after successful generation",
+      "title": "Style dragging frame with opacity",
+      "description": "Reduce opacity of frame being dragged",
       "acceptanceCriteria": [
-        "Generated image displays below textarea when generatedImage is set",
-        "Image has max-width and rounded styling",
-        "Image visible in Describe mode section",
-        "Run `npm run lint` - exits with code 0",
-        "Navigate to http://localhost:3001 - generated image displays after API call"
+        "Frame card has opacity-50 class when draggedIndex === index",
+        "Normal opacity when not being dragged",
+        "Run `npm run lint` - exits with code 0"
       ],
       "priority": 9,
-      "passes": true,
-      "notes": "Code verified: Image element with w-full rounded-lg styling renders when generatedImage set"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-010",
-      "title": "Add Accept and Try Again buttons",
-      "description": "Add action buttons below generated image for user decision",
+      "title": "Style drop target with border highlight",
+      "description": "Show visual indicator on drop target frame",
       "acceptanceCriteria": [
-        "Two buttons appear below generated image: 'Accept' and 'Try Again'",
-        "'Accept' button uses bg-green-600 text-white styling",
-        "'Try Again' button uses border styling",
-        "Buttons only visible when generatedImage is set",
-        "Run `npm run lint` - exits with code 0",
-        "Navigate to http://localhost:3001 - buttons visible after image generates"
+        "Frame card has border-blue-500 class when dropTargetIndex === index",
+        "Normal border when not drop target",
+        "Transition on border color change",
+        "Run `npm run lint` - exits with code 0"
       ],
       "priority": 10,
-      "passes": true,
-      "notes": "Code verified: Accept (green) and Try Again (bordered) buttons conditionally rendered"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-011",
-      "title": "Implement Try Again functionality",
-      "description": "Try Again button triggers new generation with same description",
+      "title": "Browser test: Drag frame in template mode",
+      "description": "Verify drag-and-drop works with template frames",
       "acceptanceCriteria": [
-        "Clicking 'Try Again' calls generateStyleReference again",
-        "Uses current textarea value (not previous)",
-        "Shows loading state during regeneration",
-        "New image replaces previous generatedImage",
-        "Run `npm run lint` - exits with code 0"
+        "Navigate to http://localhost:3001",
+        "Connect with API key, select Problem→Solution template",
+        "Go to Style phase (can skip with locked style if available)",
+        "Drag first frame (Before) to third position",
+        "Verify frame order changed: During, After, Before",
+        "Refresh page - order persists"
       ],
       "priority": 11,
-      "passes": true,
-      "notes": "Code verified: Try Again onClick calls handleGenerateReference with current descriptionInput"
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-012",
-      "title": "Implement Accept functionality - add to store",
-      "description": "Accept button adds generated image to style.referenceImages in store",
+      "title": "Browser test: Click still selects frame",
+      "description": "Verify clicking selects frames, not just drags",
       "acceptanceCriteria": [
-        "Clicking 'Accept' calls addReferenceImage(generatedImage) from store",
-        "After accept, image appears in reference images display",
-        "generatedImage state cleared after accept",
-        "Run `npm run typecheck` - exits with code 0"
+        "Navigate to app with frames",
+        "Single click on frame 2",
+        "Frame 2 shows selected state (dark border)",
+        "Chat panel shows Frame 2 context",
+        "Caption editing works on click"
       ],
       "priority": 12,
-      "passes": true,
-      "notes": "Code verified: handleAcceptGenerated calls addReferenceImage and clears generatedImage"
-    },
-    {
-      "id": "T-013",
-      "title": "Auto-trigger style analysis after Accept",
-      "description": "After accepting generated image, automatically analyze its style",
-      "acceptanceCriteria": [
-        "Accept triggers existing analyzeStyle function automatically",
-        "Style description populates from analysis",
-        "User sees style description textarea after analysis completes",
-        "Run `npm run lint` - exits with code 0",
-        "Navigate to http://localhost:3001 - accept → auto-analysis → description shows"
-      ],
-      "priority": 13,
-      "passes": true,
-      "notes": "Code verified: handleAcceptGenerated includes inline GPT-4o vision analysis call"
-    },
-    {
-      "id": "T-014",
-      "title": "Add error handling for generation failures",
-      "description": "Handle API errors gracefully with user feedback",
-      "acceptanceCriteria": [
-        "Failed generation shows error message below textarea",
-        "Error message is red text (text-red-500)",
-        "Error clears when user starts new generation",
-        "Button returns to enabled state after error",
-        "Run `npm run lint` - exits with code 0"
-      ],
-      "priority": 14,
-      "passes": true,
-      "notes": "Code verified: generateError state with text-red-500 styling, cleared in handleGenerateReference"
-    },
-    {
-      "id": "T-015",
-      "title": "Test complete describe mode flow",
-      "description": "Verify full flow from text input to locked style",
-      "acceptanceCriteria": [
-        "Navigate to http://localhost:3001 - connect API key",
-        "Select template, go to Style phase",
-        "Switch to Describe mode",
-        "Enter style description: 'Bold black ink sketch style with cross-hatching'",
-        "Click Generate Reference - image appears",
-        "Click Accept - style analysis runs",
-        "Edit description if needed, click Lock Style",
-        "Proceed to Cast phase successfully"
-      ],
-      "priority": 15,
       "passes": false,
-      "notes": "Requires real OpenAI API key for full integration test. UI flow verified with dev bypass key."
+      "notes": ""
     }
   ]
 }

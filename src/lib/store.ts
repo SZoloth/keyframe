@@ -26,6 +26,7 @@ interface KeyframeStore extends ProjectState {
   updateFrame: (frameId: string, updates: Partial<StoryboardFrame>) => void;
   addFrame: () => void;
   removeFrame: (frameId: string) => void;
+  reorderFrames: (fromIndex: number, toIndex: number) => void;
   
   // Style actions
   addReferenceImage: (base64: string) => void;
@@ -155,6 +156,14 @@ export const useStore = create<KeyframeStore>()(
             ? newFrames[0]?.id || null 
             : state.selectedFrameId,
         };
+      }),
+      
+      reorderFrames: (fromIndex, toIndex) => set(state => {
+        if (fromIndex === toIndex) return state;
+        const frames = [...state.frames];
+        const [movedFrame] = frames.splice(fromIndex, 1);
+        frames.splice(toIndex, 0, movedFrame);
+        return { frames };
       }),
       
       // Style actions

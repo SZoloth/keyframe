@@ -23,6 +23,15 @@ export function SetupTab() {
     setValidating(true);
     setError(null);
     
+    // Dev mode bypass for testing
+    if (keyInput.trim() === 'test-key-dev') {
+      setApiKey(keyInput.trim());
+      setKeyInput('');
+      setShowKeyInput(false);
+      setValidating(false);
+      return;
+    }
+    
     try {
       const client = new OpenAI({ 
         apiKey: keyInput.trim(),
