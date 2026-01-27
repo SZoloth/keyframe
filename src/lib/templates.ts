@@ -104,6 +104,9 @@ export const templates: Template[] = [
   },
 ];
 
-export function getTemplateById(id: string): Template | undefined {
-  return templates.find(t => t.id === id);
+export function getTemplateById(
+  id: string,
+  customTemplates: Template[] = []
+): Template | undefined {
+  return [...customTemplates, ...templates].find(t => t.id === id);
 }

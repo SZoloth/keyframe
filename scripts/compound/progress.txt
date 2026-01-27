@@ -67,4 +67,10 @@
 - **Learnings for future iterations:**
   - Custom templates should live in persisted state to survive reloads.
 ---
+## 2026-01-27 08:48:32 MST - T-002
+- Updated template lookup to resolve custom templates before built-ins.
+- Files changed: src/lib/templates.ts, src/lib/store.ts
+- **Learnings for future iterations:**
+  - Use store state to resolve custom templates in selectTemplate.
+---
 

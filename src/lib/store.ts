@@ -115,6 +115,7 @@ export const useStore = create<KeyframeStore>()(
       
       // Template actions
       selectTemplate: (templateId) => {
+        const state = get();
         // Handle freeform mode
         if (templateId === 'freeform') {
           const initialFrame: StoryboardFrame = {
@@ -132,7 +133,7 @@ export const useStore = create<KeyframeStore>()(
           return;
         }
         
-        const template = getTemplateById(templateId);
+        const template = getTemplateById(templateId, state.customTemplates);
         if (!template) return;
         
         const frames: StoryboardFrame[] = template.frames.map(beat => ({

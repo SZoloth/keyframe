@@ -27,8 +27,8 @@
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated getTemplateById and selectTemplate to resolve custom templates."
     },
     {
       "id": "T-003",
