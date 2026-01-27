@@ -13,4 +13,10 @@
 - **Learnings for future iterations:**
   - Keep auth state out of persisted `partialize` data.
 ---
+## 2026-01-27 08:02:08 MST - T-003
+- Added AuthProvider to sync Supabase session on load and auth changes.
+- Files changed: src/components/AuthProvider.tsx, src/app/layout.tsx
+- **Learnings for future iterations:**
+  - Guard Supabase auth listeners behind `isSupabaseConfigured`.
+---
 
