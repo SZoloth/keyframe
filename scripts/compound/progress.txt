@@ -73,4 +73,10 @@
 - **Learnings for future iterations:**
   - Clear redo stack on any new mutation to keep history consistent.
 ---
+## 2026-01-27 11:37:30 MST - T-003
+- Added Undo/Redo controls to the header and verified visibility in browser.
+- Files changed: src/components/Header.tsx
+- **Learnings for future iterations:**
+  - Place undo controls before auth actions to keep them accessible.
+---
 

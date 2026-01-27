@@ -42,8 +42,8 @@
         "agent-browser: open http://localhost:3000 - buttons visible"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Undo/Redo buttons with disabled states."
     },
     {
       "id": "T-004",
