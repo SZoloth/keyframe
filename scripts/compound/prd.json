@@ -75,8 +75,8 @@
         "agent-browser: open http://localhost:3000 - Sign in button visible"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Header now conditionally renders Sign in or user email + Sign out."
     },
     {
       "id": "T-006",

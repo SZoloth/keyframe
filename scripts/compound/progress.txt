@@ -25,4 +25,10 @@
 - **Learnings for future iterations:**
   - Keep modal triggers in Header so auth UI is globally reachable.
 ---
+## 2026-01-27 08:07:20 MST - T-005
+- Header now shows Sign in or user email + Sign out based on auth state.
+- Files changed: src/components/Header.tsx
+- **Learnings for future iterations:**
+  - Keep Sign out handler tolerant of missing Supabase config.
+---
 

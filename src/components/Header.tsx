@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useStore, useCurrentPhase, useSelectedTemplate, useFrames } from '@/lib/store';
+import { useStore, useCurrentPhase, useSelectedTemplate, useFrames, useAuthUser } from '@/lib/store';
 import { Phase } from '@/lib/types';
 import { generatePDF, downloadPDF } from './export/PDFExport';
 import { AuthModal } from './AuthModal';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const phases: { id: Phase; label: string }[] = [
   { id: 'setup', label: 'Setup' },
@@ -18,8 +19,10 @@ export function Header() {
   const currentPhase = useCurrentPhase();
   const template = useSelectedTemplate();
   const frames = useFrames();
+  const authUser = useAuthUser();
   const canAdvanceToPhase = useStore(state => state.canAdvanceToPhase);
   const setPhase = useStore(state => state.setPhase);
+  const clearAuthSession = useStore(state => state.clearAuthSession);
   
   const [exporting, setExporting] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -46,6 +49,16 @@ export function Header() {
     if (canAdvanceToPhase(phase)) {
       setPhase(phase);
     }
+  };
+
+  const handleSignOut = async () => {
+    if (!supabase || !isSupabaseConfigured) {
+      clearAuthSession();
+      return;
+    }
+
+    await supabase.auth.signOut();
+    clearAuthSession();
   };
   
   return (
@@ -97,12 +110,26 @@ export function Header() {
       
       {/* Actions */}
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => setAuthModalOpen(true)}
-          className="px-3 py-1.5 min-h-[44px] text-sm border border-zinc-300 rounded hover:bg-zinc-50"
-        >
-          Sign in
-        </button>
+        {authUser ? (
+          <>
+            <span className="text-sm text-zinc-600 max-w-[180px] truncate">
+              {authUser.email}
+            </span>
+            <button
+              onClick={handleSignOut}
+              className="px-3 py-1.5 min-h-[44px] text-sm border border-zinc-300 rounded hover:bg-zinc-50"
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setAuthModalOpen(true)}
+            className="px-3 py-1.5 min-h-[44px] text-sm border border-zinc-300 rounded hover:bg-zinc-50"
+          >
+            Sign in
+          </button>
+        )}
         <button
           onClick={handleExport}
           disabled={!hasAnyFrames || exporting}
