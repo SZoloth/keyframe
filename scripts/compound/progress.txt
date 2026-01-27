@@ -79,4 +79,10 @@
 - **Learnings for future iterations:**
   - Place undo controls before auth actions to keep them accessible.
 ---
+## 2026-01-27 11:38:33 MST - T-004
+- Verified undo/redo restores template state in the browser.
+- Files changed: none (browser verification only)
+- **Learnings for future iterations:**
+  - Undo returns to the immediate prior template selection.
+---
 
