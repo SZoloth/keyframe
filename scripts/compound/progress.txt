@@ -85,4 +85,28 @@
 - **Learnings for future iterations:**
   - Keep sync indicator muted to avoid distracting from export controls.
 ---
+## 2026-01-27 11:22:58 MST - T-005
+- Verified Sync: On indicator is visible in the header.
+- Files changed: none (browser verification only)
+- **Learnings for future iterations:**
+  - Use browser search highlight to confirm small UI labels.
+---
+## 2026-01-27 11:23:15 MST - T-006
+- Selected Problem → Solution template in tab A; tab B synced frames.
+- Files changed: none (browser verification only)
+- **Learnings for future iterations:**
+  - Cross-tab storage sync updates frame list within a second.
+---
+## 2026-01-27 11:23:30 MST - T-007
+- Switched to Raskin Pitch in tab A; tab B updated to 5-frame list.
+- Files changed: none (browser verification only)
+- **Learnings for future iterations:**
+  - Template switches propagate across tabs without manual refresh.
+---
+## 2026-01-27 11:23:49 MST - T-008
+- Verified reload persistence via Playwright (Raskin Pitch frames remained).
+- Files changed: none (Playwright verification only)
+- **Learnings for future iterations:**
+  - Playwright can validate reload when browser tool reload fails.
+---
 
