@@ -50,6 +50,7 @@ export interface ProjectState {
   selectedTemplateId: string | null;
   frames: StoryboardFrame[];
   selectedFrameId: string | null;
+  customTemplates: Template[];
   
   // Style
   style: StyleDefinition;

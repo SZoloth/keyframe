@@ -4,6 +4,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { 
   Phase, 
   Character, 
+  Template,
   StoryboardFrame, 
   StyleDefinition,
   ProjectState 
@@ -11,6 +12,9 @@ import {
 import { getTemplateById } from './templates';
 
 interface KeyframeStore extends ProjectState {
+  // Custom templates
+  addCustomTemplate: (template: Template) => void;
+
   // Cloud auth state
   authSession: Session | null;
   authUser: User | null;
@@ -56,6 +60,7 @@ const initialState: ProjectState = {
   selectedTemplateId: null,
   frames: [],
   selectedFrameId: null,
+  customTemplates: [],
   style: {
     referenceImages: [],
     description: '',
@@ -77,6 +82,11 @@ export const useStore = create<KeyframeStore>()(
         authUser: session?.user ?? null,
       }),
       clearAuthSession: () => set({ authSession: null, authUser: null }),
+
+      // Custom templates
+      addCustomTemplate: (template) => set(state => ({
+        customTemplates: [...state.customTemplates, template],
+      })),
       
       // Auth actions
       setApiKey: (key) => set({ apiKey: key }),
@@ -105,6 +115,7 @@ export const useStore = create<KeyframeStore>()(
       
       // Template actions
       selectTemplate: (templateId) => {
+        const state = get();
         // Handle freeform mode
         if (templateId === 'freeform') {
           const initialFrame: StoryboardFrame = {
@@ -122,7 +133,7 @@ export const useStore = create<KeyframeStore>()(
           return;
         }
         
-        const template = getTemplateById(templateId);
+        const template = getTemplateById(templateId, state.customTemplates);
         if (!template) return;
         
         const frames: StoryboardFrame[] = template.frames.map(beat => ({
@@ -234,6 +245,7 @@ export const useStore = create<KeyframeStore>()(
         currentPhase: state.currentPhase,
         selectedTemplateId: state.selectedTemplateId,
         frames: state.frames,
+        customTemplates: state.customTemplates,
         style: state.style,
         characters: state.characters,
       }),
@@ -258,3 +270,4 @@ export const useStyle = () => useStore(state => state.style);
 export const useCharacters = () => useStore(state => state.characters);
 export const useAuthSession = () => useStore(state => state.authSession);
 export const useAuthUser = () => useStore(state => state.authUser);
+export const useCustomTemplates = () => useStore(state => state.customTemplates);

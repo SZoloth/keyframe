@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useStore, useApiKey } from '@/lib/store';
+import { useStore, useApiKey, useCustomTemplates } from '@/lib/store';
 import { templates } from '@/lib/templates';
 import OpenAI from 'openai';
 
@@ -9,13 +9,75 @@ export function SetupTab() {
   const apiKey = useApiKey();
   const selectedTemplateId = useStore(state => state.selectedTemplateId);
   const setApiKey = useStore(state => state.setApiKey);
+  const addCustomTemplate = useStore(state => state.addCustomTemplate);
   const selectTemplate = useStore(state => state.selectTemplate);
   const setPhase = useStore(state => state.setPhase);
+  const customTemplates = useCustomTemplates();
   
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [keyInput, setKeyInput] = useState('');
   const [validating, setValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [customTemplateName, setCustomTemplateName] = useState('');
+  const [customTemplateDescription, setCustomTemplateDescription] = useState('');
+  const [customBeats, setCustomBeats] = useState<Array<{ title: string; guidance: string }>>([
+    { title: '', guidance: '' },
+  ]);
+  const [customTemplateError, setCustomTemplateError] = useState<string | null>(null);
+
+  const addCustomBeat = () => {
+    setCustomBeats((beats) => [...beats, { title: '', guidance: '' }]);
+  };
+
+  const removeCustomBeat = (index: number) => {
+    setCustomBeats((beats) => beats.filter((_, i) => i !== index));
+  };
+
+  const updateCustomBeat = (
+    index: number,
+    field: 'title' | 'guidance',
+    value: string
+  ) => {
+    if (customTemplateError) {
+      setCustomTemplateError(null);
+    }
+    setCustomBeats((beats) =>
+      beats.map((beat, i) => (i === index ? { ...beat, [field]: value } : beat))
+    );
+  };
+
+  const handleSaveCustomTemplate = () => {
+    const name = customTemplateName.trim();
+    const beats = customBeats
+      .map((beat, index) => ({
+        id: `beat-${index + 1}`,
+        title: beat.title.trim(),
+        guidance: beat.guidance.trim(),
+      }))
+      .filter((beat) => beat.title);
+
+    if (!name || beats.length === 0) {
+      setCustomTemplateError('Add a template name and at least one beat.');
+      return;
+    }
+
+    const templateId = `custom-${Date.now()}`;
+    const template = {
+      id: templateId,
+      name,
+      description: customTemplateDescription.trim() || 'Custom template',
+      frames: beats,
+    };
+
+    addCustomTemplate(template);
+    selectTemplate(templateId);
+
+    setCustomTemplateName('');
+    setCustomTemplateDescription('');
+    setCustomBeats([{ title: '', guidance: '' }]);
+    setCustomTemplateError(null);
+  };
   
   const validateApiKey = async () => {
     if (!keyInput.trim()) return;
@@ -52,6 +114,10 @@ export function SetupTab() {
   };
   
   const canProceed = !!apiKey;
+  const canSaveCustomTemplate =
+    customTemplateName.trim().length > 0 &&
+    customBeats.some((beat) => beat.title.trim().length > 0);
+  const allTemplates = [...customTemplates, ...templates];
   
   const handleProceed = () => {
     if (canProceed) {
@@ -185,7 +251,9 @@ export function SetupTab() {
             </p>
           </button>
           
-          {templates.map(template => (
+          {allTemplates.map(template => {
+            const isCustom = template.id.startsWith('custom-');
+            return (
             <button
               key={template.id}
               onClick={() => selectTemplate(template.id)}
@@ -202,14 +270,101 @@ export function SetupTab() {
                   {template.name}
                 </span>
                 <span className="text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
-                  {template.frames.length} frames
+                  {isCustom ? 'Custom' : `${template.frames.length} frames`}
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-1">
                 {template.description}
               </p>
             </button>
-          ))}
+          )})}
+        </div>
+      </div>
+
+      {/* Custom Template Creation */}
+      <div className="mb-6">
+        <h3 className="text-sm font-medium text-zinc-700 mb-2">Create Custom Template</h3>
+        <p className="text-xs text-zinc-500 mb-3">
+          Define your own beats and guidance. You can save and select it below.
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-medium text-zinc-600">Template name</label>
+            <input
+              type="text"
+              value={customTemplateName}
+              onChange={(event) => {
+                setCustomTemplateName(event.target.value);
+                if (customTemplateError) {
+                  setCustomTemplateError(null);
+                }
+              }}
+              placeholder="e.g. Weekly Update"
+              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-zinc-600">Description (optional)</label>
+            <input
+              type="text"
+              value={customTemplateDescription}
+              onChange={(event) => setCustomTemplateDescription(event.target.value)}
+              placeholder="Short description for your team"
+              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            />
+          </div>
+          <div className="space-y-2">
+            {customBeats.map((beat, index) => (
+              <div key={`custom-beat-${index}`} className="rounded-lg border border-zinc-200 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-600">
+                    Beat {index + 1}
+                  </span>
+                  {customBeats.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeCustomBeat(index)}
+                      className="text-xs text-zinc-500 hover:text-zinc-700"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={beat.title}
+                  onChange={(event) => updateCustomBeat(index, 'title', event.target.value)}
+                  placeholder="Beat title"
+                  className="mt-2 w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                />
+                <textarea
+                  value={beat.guidance}
+                  onChange={(event) => updateCustomBeat(index, 'guidance', event.target.value)}
+                  placeholder="Guidance for this beat"
+                  className="mt-2 w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                  rows={2}
+                />
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addCustomBeat}
+              className="w-full px-3 py-2 text-sm border border-dashed border-zinc-300 rounded-lg text-zinc-600 hover:border-zinc-400"
+            >
+              Add another beat
+            </button>
+            {customTemplateError && (
+              <p className="text-xs text-red-500">{customTemplateError}</p>
+            )}
+            <button
+              type="button"
+              onClick={handleSaveCustomTemplate}
+              disabled={!canSaveCustomTemplate}
+              className="w-full px-3 py-2 text-sm bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save Template
+            </button>
+          </div>
         </div>
       </div>
       

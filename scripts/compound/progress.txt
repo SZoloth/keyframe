@@ -61,4 +61,58 @@
 - **Learnings for future iterations:**
   - Use modal validation to prevent Supabase calls on invalid inputs.
 ---
+## 2026-01-27 08:46:52 MST - T-001
+- Added customTemplates to store with persistence and add action.
+- Files changed: src/lib/store.ts, src/lib/types.ts
+- **Learnings for future iterations:**
+  - Custom templates should live in persisted state to survive reloads.
+---
+## 2026-01-27 08:48:32 MST - T-002
+- Updated template lookup to resolve custom templates before built-ins.
+- Files changed: src/lib/templates.ts, src/lib/store.ts
+- **Learnings for future iterations:**
+  - Use store state to resolve custom templates in selectTemplate.
+---
+## 2026-01-27 08:49:39 MST - T-003
+- Added custom template form state and beat handlers in SetupTab.
+- Files changed: src/components/sidebar/SetupTab.tsx
+- **Learnings for future iterations:**
+  - Initialize custom beats with one empty entry for simpler UI.
+---
+## 2026-01-27 08:53:57 MST - T-004
+- Rendered custom template creation UI in SetupTab and verified inputs render.
+- Files changed: src/components/sidebar/SetupTab.tsx
+- **Learnings for future iterations:**
+  - Setup phase may need manual re-selection to view SetupTab if state persisted.
+---
+## 2026-01-27 08:55:25 MST - T-005
+- Added save handler to create and auto-select custom templates.
+- Files changed: src/components/sidebar/SetupTab.tsx
+- **Learnings for future iterations:**
+  - Filter empty beat titles before saving to avoid blank frames.
+---
+## 2026-01-27 08:57:15 MST - T-006
+- Added validation to require name + beat before saving.
+- Files changed: src/components/sidebar/SetupTab.tsx
+- **Learnings for future iterations:**
+  - Clear validation errors on input changes for better UX.
+---
+## 2026-01-27 08:58:30 MST - T-007
+- Added custom templates to the selection list with a Custom badge.
+- Files changed: src/components/sidebar/SetupTab.tsx
+- **Learnings for future iterations:**
+  - Render custom templates before built-ins for visibility.
+---
+## 2026-01-27 09:00:03 MST - T-008
+- Verified creating a custom template in the browser and auto-selection.
+- Files changed: none (browser verification only)
+- **Learnings for future iterations:**
+  - Setup phase state may persist, so reselect Setup when testing.
+---
+## 2026-01-27 09:01:15 MST - T-009
+- Verified custom template selection persists after reload and frames match.
+- Files changed: none (browser verification only)
+- **Learnings for future iterations:**
+  - Persistence relies on customTemplates in partialize storage.
+---
 
