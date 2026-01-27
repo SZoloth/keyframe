@@ -38,7 +38,20 @@ const addFrameSchema = {
 
 const setFrameImageSchema = {
   frameId: z.string().min(1, 'Frame ID is required'),
-  imageUrl: z.string().url('Must be a valid URL'),
+  imageUrl: z
+    .string()
+    .min(1, 'Image URL or data URI is required')
+    .refine((value) => {
+      if (value.startsWith('data:image/')) {
+        return true;
+      }
+      try {
+        const url = new URL(value);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    }, 'Must be an http(s) URL or data:image/... base64 URI'),
 };
 
 const updateFrameCaptionSchema = {
