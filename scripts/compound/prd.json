@@ -1,130 +1,110 @@
 {
   "project": "Keyframe",
-  "branchName": "compound/custom-template-creation",
-  "description": "Allow users to create and select custom storyboard templates",
+  "branchName": "compound/collaborative-editing",
+  "description": "Sync storyboard state across tabs via storage events",
   "tasks": [
     {
       "id": "T-001",
-      "title": "Add customTemplates to store",
-      "description": "Persist custom templates in Zustand and expose add action.",
+      "title": "Create CollaborationProvider",
+      "description": "Add a provider that listens to storage events and rehydrates state.",
       "acceptanceCriteria": [
-        "File src/lib/store.ts includes customTemplates: Template[]",
-        "Store exports addCustomTemplate(template: Template)",
-        "Store partialize persists customTemplates",
+        "File src/components/CollaborationProvider.tsx exists",
+        "Uses window.addEventListener('storage', ...) for keyframe-storage",
+        "Calls useStore.persist.rehydrate() when keyframe-storage changes",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Added customTemplates state, addCustomTemplate action, and persistence."
+      "notes": "Added CollaborationProvider with storage listener and rehydrate call."
     },
     {
       "id": "T-002",
-      "title": "Update template lookup for custom templates",
-      "description": "Ensure selectTemplate can resolve custom template ids.",
+      "title": "Guard storage rehydrate logic",
+      "description": "Avoid rehydrating on unrelated storage changes or null values.",
       "acceptanceCriteria": [
-        "File src/lib/templates.ts exports getTemplateById(id, customTemplates?)",
-        "selectTemplate checks customTemplates before built-in templates",
+        "Storage handler ignores events where key !== keyframe-storage",
+        "Storage handler ignores events with empty newValue",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Updated getTemplateById and selectTemplate to resolve custom templates."
+      "notes": "Ignored non-matching keys and empty newValue in storage handler."
     },
     {
       "id": "T-003",
-      "title": "Add custom template form state",
-      "description": "Track custom template name/description and beats in SetupTab.",
+      "title": "Wire CollaborationProvider in layout",
+      "description": "Wrap the app with CollaborationProvider for all routes.",
       "acceptanceCriteria": [
-        "SetupTab has state for template name and description",
-        "SetupTab has beats state with title and guidance",
-        "Handlers exist to add and remove beats",
+        "src/app/layout.tsx wraps children with CollaborationProvider",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 3,
       "passes": true,
-      "notes": "Added custom template form state and beat handlers in SetupTab."
+      "notes": "Wrapped app with CollaborationProvider in layout."
     },
     {
       "id": "T-004",
-      "title": "Render custom template creation UI",
-      "description": "Add inputs and beat editor in SetupTab.",
+      "title": "Add sync indicator to Header",
+      "description": "Show a small sync status label in the Header.",
       "acceptanceCriteria": [
-        "Run `npm run build` - exits with code 0",
-        "agent-browser: open http://localhost:3000 - app loads",
-        "agent-browser: snapshot -i - custom template form fields visible"
+        "Header shows text \"Sync: On\"",
+        "Label uses text-xs and muted color",
+        "Run `npm run build` - exits with code 0"
       ],
       "priority": 4,
       "passes": true,
-      "notes": "Rendered custom template form in SetupTab and verified inputs in browser."
+      "notes": "Added Sync: On label to Header actions."
     },
     {
       "id": "T-005",
-      "title": "Save custom template and auto-select",
-      "description": "Create a Template from form data and select it on save.",
+      "title": "Browser test: sync indicator visible",
+      "description": "Verify the sync indicator renders in the Header.",
       "acceptanceCriteria": [
-        "Save handler builds template with unique id and beats",
-        "addCustomTemplate called with new template",
-        "selectTemplate called with new template id",
-        "Run `npm run build` - exits with code 0"
+        "agent-browser: open http://localhost:3000 - page loads",
+        "agent-browser: snapshot -i - Sync: On text visible"
       ],
       "priority": 5,
       "passes": true,
-      "notes": "Save handler builds template, stores it, and auto-selects the new template."
+      "notes": "Verified Sync: On visible via browser search highlight."
     },
     {
       "id": "T-006",
-      "title": "Validate required fields",
-      "description": "Require template name and at least one beat before save.",
+      "title": "Browser test: cross-tab template sync",
+      "description": "Verify template selection syncs across two tabs.",
       "acceptanceCriteria": [
-        "Save button disabled until name + one beat title exist",
-        "Inline error appears when attempting save without required fields",
-        "Run `npm run build` - exits with code 0"
+        "agent-browser: open http://localhost:3000 - tab A loads",
+        "agent-browser: open http://localhost:3000 - tab B loads",
+        "agent-browser: in tab A, connect OpenAI with test-key-dev",
+        "agent-browser: in tab A, select Problem → Solution template",
+        "agent-browser: in tab B, template selection updates and frames reflect the template"
       ],
       "priority": 6,
       "passes": true,
-      "notes": "Save button now enforces required fields with inline errors."
+      "notes": "Tab A selection updated tab B frames to Before/During/After."
     },
     {
       "id": "T-007",
-      "title": "Show custom templates in selection list",
-      "description": "Display custom templates alongside built-ins in SetupTab.",
+      "title": "Browser test: cross-tab template switch",
+      "description": "Verify another template switch syncs across tabs.",
       "acceptanceCriteria": [
-        "Custom templates render in the template list",
-        "Custom templates are labeled or grouped as Custom",
-        "Run `npm run build` - exits with code 0"
+        "agent-browser: in tab A, select Raskin Pitch template",
+        "agent-browser: in tab B, frames update to The Old World / The Shift / Winners & Losers"
       ],
       "priority": 7,
       "passes": true,
-      "notes": "Custom templates now render in the template list with a Custom badge."
+      "notes": "Tab B updated to Raskin Pitch frames after switch."
     },
     {
       "id": "T-008",
-      "title": "Browser test: create custom template",
-      "description": "Verify user can create a custom template.",
+      "title": "Browser test: sync persists after reload",
+      "description": "Verify tab B still shows updates after reload.",
       "acceptanceCriteria": [
-        "agent-browser: open http://localhost:3000 - page loads",
-        "agent-browser: fill template name input with \"My Template\"",
-        "agent-browser: fill first beat title input with \"Beat 1\"",
-        "agent-browser: fill first beat guidance input with \"Guidance\"",
-        "agent-browser: click Save Template - new template appears and is selected"
+        "agent-browser: reload tab B",
+        "agent-browser: frame list still reflects selected template"
       ],
       "priority": 8,
       "passes": true,
-      "notes": "Created custom template in browser and saw it selected."
-    },
-    {
-      "id": "T-009",
-      "title": "Browser test: select custom template",
-      "description": "Verify selecting custom template updates frames and persists.",
-      "acceptanceCriteria": [
-        "agent-browser: open http://localhost:3000 - page loads",
-        "agent-browser: click custom template in list - selection updates",
-        "agent-browser: snapshot - frame titles match custom beats",
-        "agent-browser: reload - custom template still listed"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "Custom template selection persists after reload with matching frames."
+      "notes": "Playwright reload verified Raskin Pitch persisted after refresh."
     }
   ]
 }

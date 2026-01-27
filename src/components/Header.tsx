@@ -161,6 +161,7 @@ export function Header() {
       
       {/* Actions */}
       <div className="flex items-center gap-2">
+        <span className="text-xs text-zinc-400">Sync: On</span>
         {authUser ? (
           <>
             <span className="text-sm text-zinc-600 max-w-[180px] truncate">
