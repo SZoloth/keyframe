@@ -86,11 +86,12 @@
         "File src/lib/projectPersistence.ts exports serializeProject",
         "File src/lib/projectPersistence.ts exports hydrateProject",
         "Serialization includes template, frames, style, characters, phase, selectedFrameId",
+        "File src/lib/projectPersistence.ts uses useStore.setState to hydrate data",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added projectPersistence helpers to serialize and hydrate project state."
     },
     {
       "id": "T-007",
