@@ -103,4 +103,10 @@
 - **Learnings for future iterations:**
   - Render custom templates before built-ins for visibility.
 ---
+## 2026-01-27 09:00:03 MST - T-008
+- Verified creating a custom template in the browser and auto-selection.
+- Files changed: none (browser verification only)
+- **Learnings for future iterations:**
+  - Setup phase state may persist, so reselect Setup when testing.
+---
 

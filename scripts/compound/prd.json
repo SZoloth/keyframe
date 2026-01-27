@@ -109,8 +109,8 @@
         "agent-browser: click Save Template - new template appears and is selected"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created custom template in browser and saw it selected."
     },
     {
       "id": "T-009",
