@@ -79,4 +79,10 @@
 - **Learnings for future iterations:**
   - Keep providers nested to avoid breaking auth context.
 ---
+## 2026-01-27 09:35:42 MST - T-004
+- Added Sync: On indicator in the Header.
+- Files changed: src/components/Header.tsx
+- **Learnings for future iterations:**
+  - Keep sync indicator muted to avoid distracting from export controls.
+---
 

@@ -52,8 +52,8 @@
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Sync: On label to Header actions."
     },
     {
       "id": "T-005",
