@@ -68,8 +68,8 @@
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Save handler builds template, stores it, and auto-selects the new template."
     },
     {
       "id": "T-006",

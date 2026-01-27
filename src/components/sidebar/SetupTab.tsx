@@ -9,6 +9,7 @@ export function SetupTab() {
   const apiKey = useApiKey();
   const selectedTemplateId = useStore(state => state.selectedTemplateId);
   const setApiKey = useStore(state => state.setApiKey);
+  const addCustomTemplate = useStore(state => state.addCustomTemplate);
   const selectTemplate = useStore(state => state.selectTemplate);
   const setPhase = useStore(state => state.setPhase);
   
@@ -39,6 +40,36 @@ export function SetupTab() {
     setCustomBeats((beats) =>
       beats.map((beat, i) => (i === index ? { ...beat, [field]: value } : beat))
     );
+  };
+
+  const handleSaveCustomTemplate = () => {
+    const name = customTemplateName.trim();
+    const beats = customBeats
+      .map((beat, index) => ({
+        id: `beat-${index + 1}`,
+        title: beat.title.trim(),
+        guidance: beat.guidance.trim(),
+      }))
+      .filter((beat) => beat.title);
+
+    if (!name || beats.length === 0) {
+      return;
+    }
+
+    const templateId = `custom-${Date.now()}`;
+    const template = {
+      id: templateId,
+      name,
+      description: customTemplateDescription.trim() || 'Custom template',
+      frames: beats,
+    };
+
+    addCustomTemplate(template);
+    selectTemplate(templateId);
+
+    setCustomTemplateName('');
+    setCustomTemplateDescription('');
+    setCustomBeats([{ title: '', guidance: '' }]);
   };
   
   const validateApiKey = async () => {
@@ -303,6 +334,13 @@ export function SetupTab() {
               className="w-full px-3 py-2 text-sm border border-dashed border-zinc-300 rounded-lg text-zinc-600 hover:border-zinc-400"
             >
               Add another beat
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveCustomTemplate}
+              className="w-full px-3 py-2 text-sm bg-zinc-900 text-white rounded-lg hover:bg-zinc-800"
+            >
+              Save Template
             </button>
           </div>
         </div>

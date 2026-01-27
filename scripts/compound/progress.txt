@@ -85,4 +85,10 @@
 - **Learnings for future iterations:**
   - Setup phase may need manual re-selection to view SetupTab if state persisted.
 ---
+## 2026-01-27 08:55:25 MST - T-005
+- Added save handler to create and auto-select custom templates.
+- Files changed: src/components/sidebar/SetupTab.tsx
+- **Learnings for future iterations:**
+  - Filter empty beat titles before saving to avoid blank frames.
+---
 
