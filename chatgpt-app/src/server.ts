@@ -54,6 +54,12 @@ const setFrameImageSchema = {
     }, 'Must be an http(s) URL or data:image/... base64 URI'),
 };
 
+const setFrameImageBase64Schema = {
+  frameId: z.string().min(1, 'Frame ID is required'),
+  imageBase64: z.string().min(10, 'Image base64 is required'),
+  mimeType: z.string().optional(),
+};
+
 const updateFrameCaptionSchema = {
   frameId: z.string().min(1, 'Frame ID is required'),
   caption: z.string(),
@@ -66,6 +72,34 @@ function replyWithState(sessionId: string, message?: string) {
     content: message ? [{ type: 'text' as const, text: message }] : [],
     structuredContent: state,
   };
+}
+
+function attachImageToFrame(sessionId: string, frameId: string, imageUrl: string) {
+  const state = getState(sessionId);
+  const frameIndex = state.frames.findIndex((f) => f.id === frameId);
+
+  if (frameIndex === -1) {
+    return replyWithState(
+      sessionId,
+      `Frame with ID "${frameId}" not found. Available frames: ${state.frames
+        .map((f) => `${f.title} (${f.id})`)
+        .join(', ')}`
+    );
+  }
+
+  if (!imageUrl) {
+    return replyWithState(sessionId, 'Image URL is required.');
+  }
+
+  const updatedFrames = [...state.frames];
+  updatedFrames[frameIndex] = {
+    ...updatedFrames[frameIndex],
+    imageUrl,
+    status: 'complete',
+  };
+  updateState(sessionId, { frames: updatedFrames });
+
+  return replyWithState(sessionId, `Image attached to frame: ${updatedFrames[frameIndex].title}`);
 }
 
 function createKeyframeServer() {
@@ -215,27 +249,42 @@ function createKeyframeServer() {
       const sessionId = extra?.sessionId ?? 'default';
       const frameId = args?.frameId ?? '';
       const imageUrl = args?.imageUrl ?? '';
-      
-      const state = getState(sessionId);
-      const frameIndex = state.frames.findIndex((f) => f.id === frameId);
-      
-      if (frameIndex === -1) {
-        return replyWithState(sessionId, `Frame with ID "${frameId}" not found. Available frames: ${state.frames.map(f => `${f.title} (${f.id})`).join(', ')}`);
+
+      return attachImageToFrame(sessionId, frameId, imageUrl);
+    }
+  );
+
+  // Tool: set_frame_image_from_base64
+  // Use when the model returns raw base64 instead of a URL.
+  server.registerTool(
+    'set_frame_image_from_base64',
+    {
+      title: 'Set Frame Image (Base64)',
+      description:
+        'Attach a generated image to a frame using raw base64 data. Provide frameId, base64 data, and optional mimeType (image/png, image/jpeg, image/webp).',
+      inputSchema: setFrameImageBase64Schema,
+      _meta: {
+        'openai/outputTemplate': 'ui://widget/keyframe.html',
+        'openai/toolInvocation/invoking': 'Attaching image to frame...',
+        'openai/toolInvocation/invoked': 'Image attached',
+      },
+    },
+    async (args, extra) => {
+      const sessionId = extra?.sessionId ?? 'default';
+      const frameId = args?.frameId ?? '';
+      const imageBase64 = (args?.imageBase64 ?? '').replace(/\s+/g, '');
+      const mimeType = (args?.mimeType ?? 'image/png').trim();
+
+      if (!imageBase64) {
+        return replyWithState(sessionId, 'Image base64 is required.');
       }
-      
-      if (!imageUrl) {
-        return replyWithState(sessionId, 'Image URL is required.');
+
+      if (!mimeType.startsWith('image/')) {
+        return replyWithState(sessionId, 'mimeType must start with "image/".');
       }
-      
-      const updatedFrames = [...state.frames];
-      updatedFrames[frameIndex] = {
-        ...updatedFrames[frameIndex],
-        imageUrl,
-        status: 'complete',
-      };
-      updateState(sessionId, { frames: updatedFrames });
-      
-      return replyWithState(sessionId, `Image attached to frame: ${updatedFrames[frameIndex].title}`);
+
+      const imageUrl = `data:${mimeType};base64,${imageBase64}`;
+      return attachImageToFrame(sessionId, frameId, imageUrl);
     }
   );
 
