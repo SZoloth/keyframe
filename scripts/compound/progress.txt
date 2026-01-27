@@ -7,4 +7,10 @@
 - **Learnings for future iterations:**
   - Use `isSupabaseConfigured` to gate cloud UI when env vars are missing.
 ---
+## 2026-01-27 08:00:59 MST - T-002
+- Added auth session/user state and selectors in Zustand store.
+- Files changed: src/lib/store.ts
+- **Learnings for future iterations:**
+  - Keep auth state out of persisted `partialize` data.
+---
 

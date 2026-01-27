@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { Session, User } from '@supabase/supabase-js';
 import { 
   Phase, 
   Character, 
@@ -10,6 +11,12 @@ import {
 import { getTemplateById } from './templates';
 
 interface KeyframeStore extends ProjectState {
+  // Cloud auth state
+  authSession: Session | null;
+  authUser: User | null;
+  setAuthSession: (session: Session | null) => void;
+  clearAuthSession: () => void;
+
   // Auth actions
   setApiKey: (key: string) => void;
   clearApiKey: () => void;
@@ -61,6 +68,15 @@ export const useStore = create<KeyframeStore>()(
   persist(
     (set, get) => ({
       ...initialState,
+
+      // Cloud auth state
+      authSession: null,
+      authUser: null,
+      setAuthSession: (session) => set({ 
+        authSession: session,
+        authUser: session?.user ?? null,
+      }),
+      clearAuthSession: () => set({ authSession: null, authUser: null }),
       
       // Auth actions
       setApiKey: (key) => set({ apiKey: key }),
@@ -240,3 +256,5 @@ export const useSelectedFrame = () => {
 };
 export const useStyle = () => useStore(state => state.style);
 export const useCharacters = () => useStore(state => state.characters);
+export const useAuthSession = () => useStore(state => state.authSession);
+export const useAuthUser = () => useStore(state => state.authUser);

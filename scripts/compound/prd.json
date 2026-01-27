@@ -28,8 +28,8 @@
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added authSession/authUser state, actions, and selectors in Zustand store."
     },
     {
       "id": "T-003",
