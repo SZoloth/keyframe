@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useStore, useCurrentPhase, useSelectedTemplate, useFrames } from '@/lib/store';
 import { Phase } from '@/lib/types';
 import { generatePDF, downloadPDF } from './export/PDFExport';
+import { AuthModal } from './AuthModal';
 
 const phases: { id: Phase; label: string }[] = [
   { id: 'setup', label: 'Setup' },
@@ -21,6 +22,7 @@ export function Header() {
   const setPhase = useStore(state => state.setPhase);
   
   const [exporting, setExporting] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   
   const allFramesComplete = frames.length > 0 && frames.every(f => f.status === 'complete');
   const hasAnyFrames = frames.some(f => f.status === 'complete');
@@ -96,13 +98,20 @@ export function Header() {
       {/* Actions */}
       <div className="flex items-center gap-2">
         <button
+          onClick={() => setAuthModalOpen(true)}
+          className="px-3 py-1.5 min-h-[44px] text-sm border border-zinc-300 rounded hover:bg-zinc-50"
+        >
+          Sign in
+        </button>
+        <button
           onClick={handleExport}
           disabled={!hasAnyFrames || exporting}
-          className="px-3 py-1.5 text-sm bg-zinc-900 text-white rounded hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 min-h-[44px] text-sm bg-zinc-900 text-white rounded hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {exporting ? 'Exporting...' : 'Export PDF'}
         </button>
       </div>
+      <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </header>
   );
 }

@@ -19,4 +19,10 @@
 - **Learnings for future iterations:**
   - Guard Supabase auth listeners behind `isSupabaseConfigured`.
 ---
+## 2026-01-27 08:06:03 MST - T-004
+- Added AuthModal component and wired Sign in button to open it.
+- Files changed: src/components/AuthModal.tsx, src/components/Header.tsx
+- **Learnings for future iterations:**
+  - Keep modal triggers in Header so auth UI is globally reachable.
+---
 

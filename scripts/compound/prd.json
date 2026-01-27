@@ -60,8 +60,8 @@
         "agent-browser: click Sign in - Auth modal visible"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added AuthModal with sign-in/up flows and header Sign in trigger; verified modal opens."
     },
     {
       "id": "T-005",
