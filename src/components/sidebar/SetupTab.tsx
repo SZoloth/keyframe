@@ -236,6 +236,77 @@ export function SetupTab() {
           ))}
         </div>
       </div>
+
+      {/* Custom Template Creation */}
+      <div className="mb-6">
+        <h3 className="text-sm font-medium text-zinc-700 mb-2">Create Custom Template</h3>
+        <p className="text-xs text-zinc-500 mb-3">
+          Define your own beats and guidance. You can save and select it below.
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-medium text-zinc-600">Template name</label>
+            <input
+              type="text"
+              value={customTemplateName}
+              onChange={(event) => setCustomTemplateName(event.target.value)}
+              placeholder="e.g. Weekly Update"
+              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-zinc-600">Description (optional)</label>
+            <input
+              type="text"
+              value={customTemplateDescription}
+              onChange={(event) => setCustomTemplateDescription(event.target.value)}
+              placeholder="Short description for your team"
+              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            />
+          </div>
+          <div className="space-y-2">
+            {customBeats.map((beat, index) => (
+              <div key={`custom-beat-${index}`} className="rounded-lg border border-zinc-200 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-600">
+                    Beat {index + 1}
+                  </span>
+                  {customBeats.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeCustomBeat(index)}
+                      className="text-xs text-zinc-500 hover:text-zinc-700"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={beat.title}
+                  onChange={(event) => updateCustomBeat(index, 'title', event.target.value)}
+                  placeholder="Beat title"
+                  className="mt-2 w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                />
+                <textarea
+                  value={beat.guidance}
+                  onChange={(event) => updateCustomBeat(index, 'guidance', event.target.value)}
+                  placeholder="Guidance for this beat"
+                  className="mt-2 w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                  rows={2}
+                />
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addCustomBeat}
+              className="w-full px-3 py-2 text-sm border border-dashed border-zinc-300 rounded-lg text-zinc-600 hover:border-zinc-400"
+            >
+              Add another beat
+            </button>
+          </div>
+        </div>
+      </div>
       
       {/* Proceed Button */}
       <button

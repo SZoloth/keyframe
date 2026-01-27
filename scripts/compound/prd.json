@@ -54,8 +54,8 @@
         "agent-browser: snapshot -i - custom template form fields visible"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Rendered custom template form in SetupTab and verified inputs in browser."
     },
     {
       "id": "T-005",

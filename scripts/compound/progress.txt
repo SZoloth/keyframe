@@ -79,4 +79,10 @@
 - **Learnings for future iterations:**
   - Initialize custom beats with one empty entry for simpler UI.
 ---
+## 2026-01-27 08:53:57 MST - T-004
+- Rendered custom template creation UI in SetupTab and verified inputs render.
+- Files changed: src/components/sidebar/SetupTab.tsx
+- **Learnings for future iterations:**
+  - Setup phase may need manual re-selection to view SetupTab if state persisted.
+---
 
