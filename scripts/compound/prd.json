@@ -1,155 +1,130 @@
 {
   "project": "Keyframe",
-  "branchName": "compound/user-accounts-cloud",
-  "description": "Add basic auth and cloud save/load using Supabase",
+  "branchName": "compound/custom-template-creation",
+  "description": "Allow users to create and select custom storyboard templates",
   "tasks": [
     {
       "id": "T-001",
-      "title": "Add Supabase client utility",
-      "description": "Install Supabase JS and create a client wrapper with env detection.",
+      "title": "Add customTemplates to store",
+      "description": "Persist custom templates in Zustand and expose add action.",
       "acceptanceCriteria": [
-        "package.json lists @supabase/supabase-js in dependencies",
-        "File src/lib/supabase.ts exports supabase client",
-        "File src/lib/supabase.ts exports isSupabaseConfigured boolean",
+        "File src/lib/store.ts includes customTemplates: Template[]",
+        "Store exports addCustomTemplate(template: Template)",
+        "Store partialize persists customTemplates",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Installed @supabase/supabase-js and added supabase client with env detection."
+      "notes": "Added customTemplates state, addCustomTemplate action, and persistence."
     },
     {
       "id": "T-002",
-      "title": "Add auth session state to store",
-      "description": "Track auth user/session in Zustand with setter/clearer actions and selectors.",
+      "title": "Update template lookup for custom templates",
+      "description": "Ensure selectTemplate can resolve custom template ids.",
       "acceptanceCriteria": [
-        "File src/lib/store.ts includes authSession and authUser state",
-        "Store exports setAuthSession and clearAuthSession actions",
-        "Selectors export useAuthUser and useAuthSession",
+        "File src/lib/templates.ts exports getTemplateById(id, customTemplates?)",
+        "selectTemplate checks customTemplates before built-in templates",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Added authSession/authUser state, actions, and selectors in Zustand store."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-003",
-      "title": "Add AuthProvider session sync",
-      "description": "Sync Supabase auth session into the store on app load and auth changes.",
+      "title": "Add custom template form state",
+      "description": "Track custom template name/description and beats in SetupTab.",
       "acceptanceCriteria": [
-        "File src/components/AuthProvider.tsx exists",
-        "Provider calls supabase.auth.getSession on mount",
-        "Provider subscribes to supabase.auth.onAuthStateChange",
-        "File src/app/layout.tsx wraps children with AuthProvider",
+        "SetupTab has state for template name and description",
+        "SetupTab has beats state with title and guidance",
+        "Handlers exist to add and remove beats",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Added AuthProvider to sync Supabase session and wired it in layout."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-004",
-      "title": "Create AuthModal UI",
-      "description": "Add a modal for email/password sign in and sign up with Supabase.",
+      "title": "Render custom template creation UI",
+      "description": "Add inputs and beat editor in SetupTab.",
       "acceptanceCriteria": [
-        "File src/components/AuthModal.tsx exists",
-        "Modal supports sign-in and sign-up modes",
-        "Submit handlers call supabase.auth.signInWithPassword and signUp",
-        "Buttons use min-h-[44px] for touch targets",
         "Run `npm run build` - exits with code 0",
         "agent-browser: open http://localhost:3000 - app loads",
-        "agent-browser: click Sign in - Auth modal visible"
+        "agent-browser: snapshot -i - custom template form fields visible"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Added AuthModal with sign-in/up flows and header Sign in trigger; verified modal opens."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-005",
-      "title": "Add account controls to Header",
-      "description": "Show Sign in when logged out, user email + Sign out when logged in.",
+      "title": "Save custom template and auto-select",
+      "description": "Create a Template from form data and select it on save.",
       "acceptanceCriteria": [
-        "Header renders Sign in button when authUser is null",
-        "Header renders user email and Sign out when authUser exists",
-        "Sign out calls supabase.auth.signOut and clears store session",
-        "Run `npm run build` - exits with code 0",
-        "agent-browser: open http://localhost:3000 - Sign in button visible"
+        "Save handler builds template with unique id and beats",
+        "addCustomTemplate called with new template",
+        "selectTemplate called with new template id",
+        "Run `npm run build` - exits with code 0"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Header now conditionally renders Sign in or user email + Sign out."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-006",
-      "title": "Add project serialization helpers",
-      "description": "Serialize/hydrate project state for cloud persistence.",
+      "title": "Validate required fields",
+      "description": "Require template name and at least one beat before save.",
       "acceptanceCriteria": [
-        "File src/lib/projectPersistence.ts exports serializeProject",
-        "File src/lib/projectPersistence.ts exports hydrateProject",
-        "Serialization includes template, frames, style, characters, phase, selectedFrameId",
-        "File src/lib/projectPersistence.ts uses useStore.setState to hydrate data",
+        "Save button disabled until name + one beat title exist",
+        "Inline error appears when attempting save without required fields",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "Added projectPersistence helpers to serialize and hydrate project state."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-007",
-      "title": "Implement Supabase save/load functions",
-      "description": "Create functions to save, list, and load projects for the current user.",
+      "title": "Show custom templates in selection list",
+      "description": "Display custom templates alongside built-ins in SetupTab.",
       "acceptanceCriteria": [
-        "File src/lib/projectPersistence.ts exports saveProject, listProjects, loadProject",
-        "Save writes to projects table with user_id and data JSON",
-        "Load returns parsed project data ready for hydration",
-        "Handles missing Supabase config by returning errors",
+        "Custom templates render in the template list",
+        "Custom templates are labeled or grouped as Custom",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": "Added saveProject/listProjects/loadProject using Supabase projects table."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-008",
-      "title": "Add Save/Load UI controls",
-      "description": "Expose minimal cloud save/load controls in the Header.",
+      "title": "Browser test: create custom template",
+      "description": "Verify user can create a custom template.",
       "acceptanceCriteria": [
-        "Header shows Save to Cloud button when logged in",
-        "Header shows Open from Cloud dropdown when logged in",
-        "Buttons disabled when logged out or Supabase not configured",
-        "Run `npm run build` - exits with code 0",
-        "agent-browser: open http://localhost:3000 - Save/Load controls disabled when logged out"
+        "agent-browser: open http://localhost:3000 - page loads",
+        "agent-browser: fill template name input with \"My Template\"",
+        "agent-browser: fill first beat title input with \"Beat 1\"",
+        "agent-browser: fill first beat guidance input with \"Guidance\"",
+        "agent-browser: click Save Template - new template appears and is selected"
       ],
       "priority": 8,
-      "passes": true,
-      "notes": "Added Save/Open cloud controls; verified disabled state when logged out."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-009",
-      "title": "Browser test: logged-out state gating",
-      "description": "Verify cloud controls are disabled when logged out.",
+      "title": "Browser test: select custom template",
+      "description": "Verify selecting custom template updates frames and persists.",
       "acceptanceCriteria": [
         "agent-browser: open http://localhost:3000 - page loads",
-        "agent-browser: snapshot -i - Sign in button present",
-        "agent-browser: screenshot tmp/auth-logged-out.png - capture header state",
-        "agent-browser: console - no Supabase errors"
+        "agent-browser: click custom template in list - selection updates",
+        "agent-browser: snapshot - frame titles match custom beats",
+        "agent-browser: reload - custom template still listed"
       ],
       "priority": 9,
-      "passes": true,
-      "notes": "Logged-out state verified with disabled cloud actions and clean console."
-    },
-    {
-      "id": "T-010",
-      "title": "Browser test: auth modal UI",
-      "description": "Verify auth modal opens and validates inputs.",
-      "acceptanceCriteria": [
-        "agent-browser: open http://localhost:3000 - page loads",
-        "agent-browser: click Sign in - modal opens",
-        "agent-browser: fill email input with \"invalid\" - error text visible",
-        "agent-browser: click toggle to Sign up - sign up view visible"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Auth modal opens, validation error displays, and sign-up view toggles."
+      "passes": false,
+      "notes": ""
     }
   ]
 }

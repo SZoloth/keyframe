@@ -61,4 +61,10 @@
 - **Learnings for future iterations:**
   - Use modal validation to prevent Supabase calls on invalid inputs.
 ---
+## 2026-01-27 08:46:52 MST - T-001
+- Added customTemplates to store with persistence and add action.
+- Files changed: src/lib/store.ts, src/lib/types.ts
+- **Learnings for future iterations:**
+  - Custom templates should live in persisted state to survive reloads.
+---
 
