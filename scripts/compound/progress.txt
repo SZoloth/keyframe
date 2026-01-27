@@ -1,0 +1,10 @@
+## Codebase Patterns
+- App state lives in `src/lib/store.ts` (Zustand + persist). Update `partialize` when adding persisted fields.
+
+## 2026-01-27 07:59:20 MST - T-001
+- Installed Supabase JS and added a client helper with env detection.
+- Files changed: package.json, package-lock.json, src/lib/supabase.ts
+- **Learnings for future iterations:**
+  - Use `isSupabaseConfigured` to gate cloud UI when env vars are missing.
+---
+
