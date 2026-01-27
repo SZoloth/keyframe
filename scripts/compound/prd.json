@@ -94,8 +94,8 @@
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Custom templates now render in the template list with a Custom badge."
     },
     {
       "id": "T-008",

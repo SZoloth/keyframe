@@ -97,4 +97,10 @@
 - **Learnings for future iterations:**
   - Clear validation errors on input changes for better UX.
 ---
+## 2026-01-27 08:58:30 MST - T-007
+- Added custom templates to the selection list with a Custom badge.
+- Files changed: src/components/sidebar/SetupTab.tsx
+- **Learnings for future iterations:**
+  - Render custom templates before built-ins for visibility.
+---
 

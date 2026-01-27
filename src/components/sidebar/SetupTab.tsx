@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useStore, useApiKey } from '@/lib/store';
+import { useStore, useApiKey, useCustomTemplates } from '@/lib/store';
 import { templates } from '@/lib/templates';
 import OpenAI from 'openai';
 
@@ -12,6 +12,7 @@ export function SetupTab() {
   const addCustomTemplate = useStore(state => state.addCustomTemplate);
   const selectTemplate = useStore(state => state.selectTemplate);
   const setPhase = useStore(state => state.setPhase);
+  const customTemplates = useCustomTemplates();
   
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [keyInput, setKeyInput] = useState('');
@@ -116,6 +117,7 @@ export function SetupTab() {
   const canSaveCustomTemplate =
     customTemplateName.trim().length > 0 &&
     customBeats.some((beat) => beat.title.trim().length > 0);
+  const allTemplates = [...customTemplates, ...templates];
   
   const handleProceed = () => {
     if (canProceed) {
@@ -249,7 +251,9 @@ export function SetupTab() {
             </p>
           </button>
           
-          {templates.map(template => (
+          {allTemplates.map(template => {
+            const isCustom = template.id.startsWith('custom-');
+            return (
             <button
               key={template.id}
               onClick={() => selectTemplate(template.id)}
@@ -266,14 +270,14 @@ export function SetupTab() {
                   {template.name}
                 </span>
                 <span className="text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
-                  {template.frames.length} frames
+                  {isCustom ? 'Custom' : `${template.frames.length} frames`}
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-1">
                 {template.description}
               </p>
             </button>
-          ))}
+          )})}
         </div>
       </div>
 
