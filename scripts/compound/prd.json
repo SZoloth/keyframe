@@ -105,8 +105,8 @@
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added saveProject/listProjects/loadProject using Supabase projects table."
     },
     {
       "id": "T-008",

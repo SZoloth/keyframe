@@ -37,4 +37,10 @@
 - **Learnings for future iterations:**
   - Preserve apiKey when hydrating project data.
 ---
+## 2026-01-27 08:10:31 MST - T-007
+- Added Supabase persistence functions for saving and loading projects.
+- Files changed: src/lib/projectPersistence.ts
+- **Learnings for future iterations:**
+  - Always gate Supabase calls with authUser presence and config check.
+---
 
