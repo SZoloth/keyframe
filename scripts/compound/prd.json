@@ -39,8 +39,8 @@
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wrapped app with CollaborationProvider in layout."
     },
     {
       "id": "T-004",

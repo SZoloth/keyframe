@@ -73,4 +73,10 @@
 - **Learnings for future iterations:**
   - Ignore null newValue to avoid rehydrating on localStorage clears.
 ---
+## 2026-01-27 09:34:10 MST - T-003
+- Wrapped the app with CollaborationProvider in layout.
+- Files changed: src/app/layout.tsx
+- **Learnings for future iterations:**
+  - Keep providers nested to avoid breaking auth context.
+---
 
