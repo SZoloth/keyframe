@@ -67,4 +67,10 @@
 - **Learnings for future iterations:**
   - Snapshot only ProjectState fields to avoid undoing auth session data.
 ---
+## 2026-01-27 11:35:25 MST - T-002
+- Recorded history for template, frame, style, cast, and reset actions.
+- Files changed: src/lib/store.ts
+- **Learnings for future iterations:**
+  - Clear redo stack on any new mutation to keep history consistent.
+---
 

@@ -71,6 +71,11 @@ const snapshotProjectState = (state: ProjectState): ProjectState => ({
   characters: state.characters.map(character => ({ ...character })),
 });
 
+const recordHistory = (state: KeyframeStore) => ({
+  history: [...state.history, snapshotProjectState(state)].slice(-MAX_HISTORY),
+  future: [],
+});
+
 const initialState: ProjectState = {
   apiKey: null,
   currentPhase: 'setup',
@@ -157,7 +162,7 @@ export const useStore = create<KeyframeStore>()(
       },
       
       // Template actions
-      selectTemplate: (templateId) => {
+      selectTemplate: (templateId) => set(state => {
         // Handle freeform mode
         if (templateId === 'freeform') {
           const initialFrame: StoryboardFrame = {
@@ -167,16 +172,16 @@ export const useStore = create<KeyframeStore>()(
             caption: 'Frame 1',
             status: 'empty',
           };
-          set({ 
+          return { 
+            ...recordHistory(state),
             selectedTemplateId: 'freeform', 
             frames: [initialFrame],
             selectedFrameId: initialFrame.id,
-          });
-          return;
+          };
         }
         
         const template = getTemplateById(templateId);
-        if (!template) return;
+        if (!template) return state;
         
         const frames: StoryboardFrame[] = template.frames.map(beat => ({
           id: `frame-${beat.id}`,
@@ -186,17 +191,19 @@ export const useStore = create<KeyframeStore>()(
           status: 'empty',
         }));
         
-        set({ 
+        return { 
+          ...recordHistory(state),
           selectedTemplateId: templateId, 
           frames,
           selectedFrameId: frames[0]?.id || null,
-        });
-      },
+        };
+      }),
       
       // Frame actions
       selectFrame: (frameId) => set({ selectedFrameId: frameId }),
       
       updateFrame: (frameId, updates) => set(state => ({
+        ...recordHistory(state),
         frames: state.frames.map(f => 
           f.id === frameId ? { ...f, ...updates } : f
         ),
@@ -212,6 +219,7 @@ export const useStore = create<KeyframeStore>()(
           status: 'empty',
         };
         return {
+          ...recordHistory(state),
           frames: [...state.frames, newFrame],
           selectedFrameId: newFrame.id,
         };
@@ -220,6 +228,7 @@ export const useStore = create<KeyframeStore>()(
       removeFrame: (frameId) => set(state => {
         const newFrames = state.frames.filter(f => f.id !== frameId);
         return {
+          ...recordHistory(state),
           frames: newFrames,
           selectedFrameId: state.selectedFrameId === frameId 
             ? newFrames[0]?.id || null 
@@ -232,11 +241,15 @@ export const useStore = create<KeyframeStore>()(
         const frames = [...state.frames];
         const [movedFrame] = frames.splice(fromIndex, 1);
         frames.splice(toIndex, 0, movedFrame);
-        return { frames };
+        return { 
+          ...recordHistory(state),
+          frames,
+        };
       }),
       
       // Style actions
       addReferenceImage: (base64) => set(state => ({
+        ...recordHistory(state),
         style: {
           ...state.style,
           referenceImages: [...state.style.referenceImages, base64].slice(0, 3),
@@ -244,6 +257,7 @@ export const useStore = create<KeyframeStore>()(
       })),
       
       removeReferenceImage: (index) => set(state => ({
+        ...recordHistory(state),
         style: {
           ...state.style,
           referenceImages: state.style.referenceImages.filter((_, i) => i !== index),
@@ -251,16 +265,19 @@ export const useStore = create<KeyframeStore>()(
       })),
       
       setStyleDescription: (description) => set(state => ({
+        ...recordHistory(state),
         style: { ...state.style, description },
       })),
       
       lockStyle: () => set(state => ({
+        ...recordHistory(state),
         style: { ...state.style, locked: true },
         currentPhase: 'cast',
       })),
       
       // Cast actions
       addCharacter: (character) => set(state => ({
+        ...recordHistory(state),
         characters: [
           ...state.characters,
           { ...character, id: `char-${Date.now()}` },
@@ -268,17 +285,22 @@ export const useStore = create<KeyframeStore>()(
       })),
       
       updateCharacter: (id, updates) => set(state => ({
+        ...recordHistory(state),
         characters: state.characters.map(c => 
           c.id === id ? { ...c, ...updates } : c
         ),
       })),
       
       removeCharacter: (id) => set(state => ({
+        ...recordHistory(state),
         characters: state.characters.filter(c => c.id !== id),
       })),
       
       // Project actions
-      resetProject: () => set(initialState),
+      resetProject: () => set(state => ({
+        ...recordHistory(state),
+        ...initialState,
+      })),
     }),
     {
       name: 'keyframe-storage',

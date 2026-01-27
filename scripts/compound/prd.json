@@ -28,8 +28,8 @@
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Project mutations now push snapshots and clear redo stack."
     },
     {
       "id": "T-003",
