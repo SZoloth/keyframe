@@ -23,6 +23,7 @@ export function SetupTab() {
   const [customBeats, setCustomBeats] = useState<Array<{ title: string; guidance: string }>>([
     { title: '', guidance: '' },
   ]);
+  const [customTemplateError, setCustomTemplateError] = useState<string | null>(null);
 
   const addCustomBeat = () => {
     setCustomBeats((beats) => [...beats, { title: '', guidance: '' }]);
@@ -37,6 +38,9 @@ export function SetupTab() {
     field: 'title' | 'guidance',
     value: string
   ) => {
+    if (customTemplateError) {
+      setCustomTemplateError(null);
+    }
     setCustomBeats((beats) =>
       beats.map((beat, i) => (i === index ? { ...beat, [field]: value } : beat))
     );
@@ -53,6 +57,7 @@ export function SetupTab() {
       .filter((beat) => beat.title);
 
     if (!name || beats.length === 0) {
+      setCustomTemplateError('Add a template name and at least one beat.');
       return;
     }
 
@@ -70,6 +75,7 @@ export function SetupTab() {
     setCustomTemplateName('');
     setCustomTemplateDescription('');
     setCustomBeats([{ title: '', guidance: '' }]);
+    setCustomTemplateError(null);
   };
   
   const validateApiKey = async () => {
@@ -107,6 +113,9 @@ export function SetupTab() {
   };
   
   const canProceed = !!apiKey;
+  const canSaveCustomTemplate =
+    customTemplateName.trim().length > 0 &&
+    customBeats.some((beat) => beat.title.trim().length > 0);
   
   const handleProceed = () => {
     if (canProceed) {
@@ -280,7 +289,12 @@ export function SetupTab() {
             <input
               type="text"
               value={customTemplateName}
-              onChange={(event) => setCustomTemplateName(event.target.value)}
+              onChange={(event) => {
+                setCustomTemplateName(event.target.value);
+                if (customTemplateError) {
+                  setCustomTemplateError(null);
+                }
+              }}
               placeholder="e.g. Weekly Update"
               className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
             />
@@ -335,10 +349,14 @@ export function SetupTab() {
             >
               Add another beat
             </button>
+            {customTemplateError && (
+              <p className="text-xs text-red-500">{customTemplateError}</p>
+            )}
             <button
               type="button"
               onClick={handleSaveCustomTemplate}
-              className="w-full px-3 py-2 text-sm bg-zinc-900 text-white rounded-lg hover:bg-zinc-800"
+              disabled={!canSaveCustomTemplate}
+              className="w-full px-3 py-2 text-sm bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Save Template
             </button>

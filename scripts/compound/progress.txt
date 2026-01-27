@@ -91,4 +91,10 @@
 - **Learnings for future iterations:**
   - Filter empty beat titles before saving to avoid blank frames.
 ---
+## 2026-01-27 08:57:15 MST - T-006
+- Added validation to require name + beat before saving.
+- Files changed: src/components/sidebar/SetupTab.tsx
+- **Learnings for future iterations:**
+  - Clear validation errors on input changes for better UX.
+---
 
