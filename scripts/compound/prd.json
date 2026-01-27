@@ -123,8 +123,8 @@
         "agent-browser: reload - custom template still listed"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Custom template selection persists after reload with matching frames."
     }
   ]
 }

@@ -109,4 +109,10 @@
 - **Learnings for future iterations:**
   - Setup phase state may persist, so reselect Setup when testing.
 ---
+## 2026-01-27 09:01:15 MST - T-009
+- Verified custom template selection persists after reload and frames match.
+- Files changed: none (browser verification only)
+- **Learnings for future iterations:**
+  - Persistence relies on customTemplates in partialize storage.
+---
 
