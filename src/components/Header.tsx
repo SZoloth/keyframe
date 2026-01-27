@@ -6,6 +6,7 @@ import { Phase } from '@/lib/types';
 import { generatePDF, downloadPDF } from './export/PDFExport';
 import { AuthModal } from './AuthModal';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { hydrateProject, listProjects, loadProject, saveProject } from '@/lib/projectPersistence';
 
 const phases: { id: Phase; label: string }[] = [
   { id: 'setup', label: 'Setup' },
@@ -26,6 +27,9 @@ export function Header() {
   
   const [exporting, setExporting] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [cloudMenuOpen, setCloudMenuOpen] = useState(false);
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [cloudProjects, setCloudProjects] = useState<Array<{ id: string; name: string }>>([]);
   
   const allFramesComplete = frames.length > 0 && frames.every(f => f.status === 'complete');
   const hasAnyFrames = frames.some(f => f.status === 'complete');
@@ -59,6 +63,53 @@ export function Header() {
 
     await supabase.auth.signOut();
     clearAuthSession();
+  };
+
+  const canUseCloud = Boolean(authUser && isSupabaseConfigured);
+
+  const handleSaveProject = async () => {
+    if (!canUseCloud) return;
+    const name = window.prompt('Name this project');
+    if (!name) return;
+
+    const state = useStore.getState();
+    const { error } = await saveProject(name, state);
+    if (error) {
+      alert(error);
+    }
+  };
+
+  const toggleCloudMenu = async () => {
+    if (!canUseCloud) return;
+    if (cloudMenuOpen) {
+      setCloudMenuOpen(false);
+      return;
+    }
+
+    setCloudMenuOpen(true);
+    setCloudLoading(true);
+    const { data, error } = await listProjects();
+    setCloudLoading(false);
+
+    if (error) {
+      alert(error);
+      setCloudMenuOpen(false);
+      return;
+    }
+
+    setCloudProjects(data.map(project => ({ id: project.id, name: project.name })));
+  };
+
+  const handleLoadProject = async (projectId: string) => {
+    if (!canUseCloud) return;
+    const { data, error } = await loadProject(projectId);
+    if (error || !data) {
+      alert(error || 'Unable to load project.');
+      return;
+    }
+
+    hydrateProject(data);
+    setCloudMenuOpen(false);
   };
   
   return (
@@ -130,6 +181,43 @@ export function Header() {
             Sign in
           </button>
         )}
+        <button
+          onClick={handleSaveProject}
+          disabled={!canUseCloud}
+          className="px-3 py-1.5 min-h-[44px] text-sm border border-zinc-300 rounded hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={canUseCloud ? 'Save this project to the cloud' : 'Sign in to save projects'}
+        >
+          Save to Cloud
+        </button>
+        <div className="relative">
+          <button
+            onClick={toggleCloudMenu}
+            disabled={!canUseCloud}
+            className="px-3 py-1.5 min-h-[44px] text-sm border border-zinc-300 rounded hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={canUseCloud ? 'Open a saved project' : 'Sign in to open projects'}
+          >
+            Open from Cloud
+          </button>
+          {cloudMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 rounded border border-zinc-200 bg-white shadow-lg z-10">
+              {cloudLoading ? (
+                <div className="px-3 py-2 text-sm text-zinc-500">Loading...</div>
+              ) : cloudProjects.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-zinc-500">No saved projects</div>
+              ) : (
+                cloudProjects.map(project => (
+                  <button
+                    key={project.id}
+                    onClick={() => handleLoadProject(project.id)}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-zinc-50"
+                  >
+                    {project.name}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
         <button
           onClick={handleExport}
           disabled={!hasAnyFrames || exporting}

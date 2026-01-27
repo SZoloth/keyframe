@@ -120,8 +120,8 @@
         "agent-browser: open http://localhost:3000 - Save/Load controls disabled when logged out"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Save/Open cloud controls; verified disabled state when logged out."
     },
     {
       "id": "T-009",

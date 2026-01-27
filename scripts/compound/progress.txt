@@ -43,4 +43,10 @@
 - **Learnings for future iterations:**
   - Always gate Supabase calls with authUser presence and config check.
 ---
+## 2026-01-27 08:12:55 MST - T-008
+- Added Save/Open cloud controls and dropdown project list.
+- Files changed: src/components/Header.tsx
+- **Learnings for future iterations:**
+  - Keep cloud menu state local to Header to avoid global churn.
+---
 
