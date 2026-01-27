@@ -55,4 +55,10 @@
 - **Learnings for future iterations:**
   - Prefer console info/warn for missing config to avoid false error signals.
 ---
+## 2026-01-27 08:22:26 MST - T-010
+- Verified auth modal opens, validates email, and toggles sign-up view.
+- Files changed: none (browser verification only)
+- **Learnings for future iterations:**
+  - Use modal validation to prevent Supabase calls on invalid inputs.
+---
 

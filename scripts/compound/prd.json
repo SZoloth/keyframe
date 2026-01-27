@@ -148,8 +148,8 @@
         "agent-browser: click toggle to Sign up - sign up view visible"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Auth modal opens, validation error displays, and sign-up view toggles."
     }
   ]
 }
