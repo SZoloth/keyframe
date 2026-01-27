@@ -61,4 +61,10 @@
 - **Learnings for future iterations:**
   - Use modal validation to prevent Supabase calls on invalid inputs.
 ---
+## 2026-01-27 11:32:02 MST - T-001
+- Added undo/redo stacks with snapshot helper and actions in the store.
+- Files changed: src/lib/store.ts
+- **Learnings for future iterations:**
+  - Snapshot only ProjectState fields to avoid undoing auth session data.
+---
 

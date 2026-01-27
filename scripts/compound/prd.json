@@ -1,155 +1,63 @@
 {
   "project": "Keyframe",
-  "branchName": "compound/user-accounts-cloud",
-  "description": "Add basic auth and cloud save/load using Supabase",
+  "branchName": "compound/undo-redo",
+  "description": "Add undo/redo stack for project edits",
   "tasks": [
     {
       "id": "T-001",
-      "title": "Add Supabase client utility",
-      "description": "Install Supabase JS and create a client wrapper with env detection.",
+      "title": "Add undo/redo state and actions",
+      "description": "Add history/future stacks and undo/redo actions to the store.",
       "acceptanceCriteria": [
-        "package.json lists @supabase/supabase-js in dependencies",
-        "File src/lib/supabase.ts exports supabase client",
-        "File src/lib/supabase.ts exports isSupabaseConfigured boolean",
+        "Store includes history and future stacks",
+        "Store exposes undo() and redo() actions",
+        "Selectors export canUndo and canRedo",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Installed @supabase/supabase-js and added supabase client with env detection."
+      "notes": "Added history/future stacks with undo/redo actions and selectors."
     },
     {
       "id": "T-002",
-      "title": "Add auth session state to store",
-      "description": "Track auth user/session in Zustand with setter/clearer actions and selectors.",
+      "title": "Record history for project mutations",
+      "description": "Capture snapshots before edits and clear redo stack.",
       "acceptanceCriteria": [
-        "File src/lib/store.ts includes authSession and authUser state",
-        "Store exports setAuthSession and clearAuthSession actions",
-        "Selectors export useAuthUser and useAuthSession",
+        "Template/frames/style/cast mutations push to history",
+        "Undo/redo restores prior project state",
+        "Redo stack clears on new edits",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Added authSession/authUser state, actions, and selectors in Zustand store."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-003",
-      "title": "Add AuthProvider session sync",
-      "description": "Sync Supabase auth session into the store on app load and auth changes.",
+      "title": "Add Undo/Redo controls to Header",
+      "description": "Add buttons and wire them to the store.",
       "acceptanceCriteria": [
-        "File src/components/AuthProvider.tsx exists",
-        "Provider calls supabase.auth.getSession on mount",
-        "Provider subscribes to supabase.auth.onAuthStateChange",
-        "File src/app/layout.tsx wraps children with AuthProvider",
-        "Run `npm run build` - exits with code 0"
+        "Header shows Undo and Redo buttons",
+        "Buttons disable when no history/future",
+        "Run `npm run build` - exits with code 0",
+        "agent-browser: open http://localhost:3000 - buttons visible"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Added AuthProvider to sync Supabase session and wired it in layout."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "T-004",
-      "title": "Create AuthModal UI",
-      "description": "Add a modal for email/password sign in and sign up with Supabase.",
+      "title": "Browser test: undo/redo template changes",
+      "description": "Verify template switch can be undone and redone.",
       "acceptanceCriteria": [
-        "File src/components/AuthModal.tsx exists",
-        "Modal supports sign-in and sign-up modes",
-        "Submit handlers call supabase.auth.signInWithPassword and signUp",
-        "Buttons use min-h-[44px] for touch targets",
-        "Run `npm run build` - exits with code 0",
-        "agent-browser: open http://localhost:3000 - app loads",
-        "agent-browser: click Sign in - Auth modal visible"
+        "agent-browser: open http://localhost:3000 - page loads",
+        "agent-browser: select Problem → Solution template",
+        "agent-browser: click Undo - frames revert",
+        "agent-browser: click Redo - frames return to Problem → Solution"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Added AuthModal with sign-in/up flows and header Sign in trigger; verified modal opens."
-    },
-    {
-      "id": "T-005",
-      "title": "Add account controls to Header",
-      "description": "Show Sign in when logged out, user email + Sign out when logged in.",
-      "acceptanceCriteria": [
-        "Header renders Sign in button when authUser is null",
-        "Header renders user email and Sign out when authUser exists",
-        "Sign out calls supabase.auth.signOut and clears store session",
-        "Run `npm run build` - exits with code 0",
-        "agent-browser: open http://localhost:3000 - Sign in button visible"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Header now conditionally renders Sign in or user email + Sign out."
-    },
-    {
-      "id": "T-006",
-      "title": "Add project serialization helpers",
-      "description": "Serialize/hydrate project state for cloud persistence.",
-      "acceptanceCriteria": [
-        "File src/lib/projectPersistence.ts exports serializeProject",
-        "File src/lib/projectPersistence.ts exports hydrateProject",
-        "Serialization includes template, frames, style, characters, phase, selectedFrameId",
-        "File src/lib/projectPersistence.ts uses useStore.setState to hydrate data",
-        "Run `npm run build` - exits with code 0"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Added projectPersistence helpers to serialize and hydrate project state."
-    },
-    {
-      "id": "T-007",
-      "title": "Implement Supabase save/load functions",
-      "description": "Create functions to save, list, and load projects for the current user.",
-      "acceptanceCriteria": [
-        "File src/lib/projectPersistence.ts exports saveProject, listProjects, loadProject",
-        "Save writes to projects table with user_id and data JSON",
-        "Load returns parsed project data ready for hydration",
-        "Handles missing Supabase config by returning errors",
-        "Run `npm run build` - exits with code 0"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Added saveProject/listProjects/loadProject using Supabase projects table."
-    },
-    {
-      "id": "T-008",
-      "title": "Add Save/Load UI controls",
-      "description": "Expose minimal cloud save/load controls in the Header.",
-      "acceptanceCriteria": [
-        "Header shows Save to Cloud button when logged in",
-        "Header shows Open from Cloud dropdown when logged in",
-        "Buttons disabled when logged out or Supabase not configured",
-        "Run `npm run build` - exits with code 0",
-        "agent-browser: open http://localhost:3000 - Save/Load controls disabled when logged out"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "Added Save/Open cloud controls; verified disabled state when logged out."
-    },
-    {
-      "id": "T-009",
-      "title": "Browser test: logged-out state gating",
-      "description": "Verify cloud controls are disabled when logged out.",
-      "acceptanceCriteria": [
-        "agent-browser: open http://localhost:3000 - page loads",
-        "agent-browser: snapshot -i - Sign in button present",
-        "agent-browser: screenshot tmp/auth-logged-out.png - capture header state",
-        "agent-browser: console - no Supabase errors"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "Logged-out state verified with disabled cloud actions and clean console."
-    },
-    {
-      "id": "T-010",
-      "title": "Browser test: auth modal UI",
-      "description": "Verify auth modal opens and validates inputs.",
-      "acceptanceCriteria": [
-        "agent-browser: open http://localhost:3000 - page loads",
-        "agent-browser: click Sign in - modal opens",
-        "agent-browser: fill email input with \"invalid\" - error text visible",
-        "agent-browser: click toggle to Sign up - sign up view visible"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Auth modal opens, validation error displays, and sign-up view toggles."
+      "passes": false,
+      "notes": ""
     }
   ]
 }

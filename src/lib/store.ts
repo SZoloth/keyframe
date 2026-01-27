@@ -11,6 +11,12 @@ import {
 import { getTemplateById } from './templates';
 
 interface KeyframeStore extends ProjectState {
+  // Undo/redo state
+  history: ProjectState[];
+  future: ProjectState[];
+  undo: () => void;
+  redo: () => void;
+
   // Cloud auth state
   authSession: Session | null;
   authUser: User | null;
@@ -50,6 +56,21 @@ interface KeyframeStore extends ProjectState {
   resetProject: () => void;
 }
 
+const MAX_HISTORY = 50;
+
+const snapshotProjectState = (state: ProjectState): ProjectState => ({
+  apiKey: state.apiKey,
+  currentPhase: state.currentPhase,
+  selectedTemplateId: state.selectedTemplateId,
+  frames: state.frames.map(frame => ({ ...frame })),
+  selectedFrameId: state.selectedFrameId,
+  style: {
+    ...state.style,
+    referenceImages: [...state.style.referenceImages],
+  },
+  characters: state.characters.map(character => ({ ...character })),
+});
+
 const initialState: ProjectState = {
   apiKey: null,
   currentPhase: 'setup',
@@ -68,6 +89,38 @@ export const useStore = create<KeyframeStore>()(
   persist(
     (set, get) => ({
       ...initialState,
+
+      // Undo/redo state
+      history: [],
+      future: [],
+      undo: () => set(state => {
+        if (state.history.length === 0) return state;
+        const previous = state.history[state.history.length - 1];
+        const history = state.history.slice(0, -1);
+        const future = [
+          snapshotProjectState(state),
+          ...state.future,
+        ].slice(0, MAX_HISTORY);
+        return {
+          ...previous,
+          history,
+          future,
+        };
+      }),
+      redo: () => set(state => {
+        if (state.future.length === 0) return state;
+        const next = state.future[0];
+        const future = state.future.slice(1);
+        const history = [
+          ...state.history,
+          snapshotProjectState(state),
+        ].slice(-MAX_HISTORY);
+        return {
+          ...next,
+          history,
+          future,
+        };
+      }),
 
       // Cloud auth state
       authSession: null,
@@ -258,3 +311,5 @@ export const useStyle = () => useStore(state => state.style);
 export const useCharacters = () => useStore(state => state.characters);
 export const useAuthSession = () => useStore(state => state.authSession);
 export const useAuthUser = () => useStore(state => state.authUser);
+export const useCanUndo = () => useStore(state => state.history.length > 0);
+export const useCanRedo = () => useStore(state => state.future.length > 0);
