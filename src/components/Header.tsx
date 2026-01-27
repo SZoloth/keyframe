@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useStore, useCurrentPhase, useSelectedTemplate, useFrames, useAuthUser } from '@/lib/store';
+import { useStore, useCurrentPhase, useSelectedTemplate, useFrames, useAuthUser, useCanUndo, useCanRedo } from '@/lib/store';
 import { Phase } from '@/lib/types';
 import { generatePDF, downloadPDF } from './export/PDFExport';
 import { AuthModal } from './AuthModal';
@@ -21,9 +21,13 @@ export function Header() {
   const template = useSelectedTemplate();
   const frames = useFrames();
   const authUser = useAuthUser();
+  const canUndo = useCanUndo();
+  const canRedo = useCanRedo();
   const canAdvanceToPhase = useStore(state => state.canAdvanceToPhase);
   const setPhase = useStore(state => state.setPhase);
   const clearAuthSession = useStore(state => state.clearAuthSession);
+  const undo = useStore(state => state.undo);
+  const redo = useStore(state => state.redo);
   
   const [exporting, setExporting] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -162,6 +166,22 @@ export function Header() {
       {/* Actions */}
       <div className="flex items-center gap-2">
         <span className="text-xs text-zinc-400">Sync: On</span>
+        <button
+          onClick={undo}
+          disabled={!canUndo}
+          className="px-3 py-1.5 min-h-[44px] text-sm border border-zinc-300 rounded hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Undo last change"
+        >
+          Undo
+        </button>
+        <button
+          onClick={redo}
+          disabled={!canRedo}
+          className="px-3 py-1.5 min-h-[44px] text-sm border border-zinc-300 rounded hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Redo last change"
+        >
+          Redo
+        </button>
         {authUser ? (
           <>
             <span className="text-sm text-zinc-600 max-w-[180px] truncate">

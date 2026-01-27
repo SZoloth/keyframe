@@ -14,6 +14,11 @@ import { getTemplateById } from './templates';
 interface KeyframeStore extends ProjectState {
   // Custom templates
   addCustomTemplate: (template: Template) => void;
+  // Undo/redo state
+  history: ProjectState[];
+  future: ProjectState[];
+  undo: () => void;
+  redo: () => void;
 
   // Cloud auth state
   authSession: Session | null;
@@ -54,6 +59,30 @@ interface KeyframeStore extends ProjectState {
   resetProject: () => void;
 }
 
+const MAX_HISTORY = 50;
+
+const snapshotProjectState = (state: ProjectState): ProjectState => ({
+  apiKey: state.apiKey,
+  currentPhase: state.currentPhase,
+  selectedTemplateId: state.selectedTemplateId,
+  frames: state.frames.map(frame => ({ ...frame })),
+  selectedFrameId: state.selectedFrameId,
+  customTemplates: state.customTemplates.map(template => ({
+    ...template,
+    frames: template.frames.map(frame => ({ ...frame })),
+  })),
+  style: {
+    ...state.style,
+    referenceImages: [...state.style.referenceImages],
+  },
+  characters: state.characters.map(character => ({ ...character })),
+});
+
+const recordHistory = (state: KeyframeStore) => ({
+  history: [...state.history, snapshotProjectState(state)].slice(-MAX_HISTORY),
+  future: [],
+});
+
 const initialState: ProjectState = {
   apiKey: null,
   currentPhase: 'setup',
@@ -74,6 +103,38 @@ export const useStore = create<KeyframeStore>()(
     (set, get) => ({
       ...initialState,
 
+      // Undo/redo state
+      history: [],
+      future: [],
+      undo: () => set(state => {
+        if (state.history.length === 0) return state;
+        const previous = state.history[state.history.length - 1];
+        const history = state.history.slice(0, -1);
+        const future = [
+          snapshotProjectState(state),
+          ...state.future,
+        ].slice(0, MAX_HISTORY);
+        return {
+          ...previous,
+          history,
+          future,
+        };
+      }),
+      redo: () => set(state => {
+        if (state.future.length === 0) return state;
+        const next = state.future[0];
+        const future = state.future.slice(1);
+        const history = [
+          ...state.history,
+          snapshotProjectState(state),
+        ].slice(-MAX_HISTORY);
+        return {
+          ...next,
+          history,
+          future,
+        };
+      }),
+
       // Cloud auth state
       authSession: null,
       authUser: null,
@@ -85,6 +146,7 @@ export const useStore = create<KeyframeStore>()(
 
       // Custom templates
       addCustomTemplate: (template) => set(state => ({
+        ...recordHistory(state),
         customTemplates: [...state.customTemplates, template],
       })),
       
@@ -114,8 +176,7 @@ export const useStore = create<KeyframeStore>()(
       },
       
       // Template actions
-      selectTemplate: (templateId) => {
-        const state = get();
+      selectTemplate: (templateId) => set(state => {
         // Handle freeform mode
         if (templateId === 'freeform') {
           const initialFrame: StoryboardFrame = {
@@ -125,16 +186,16 @@ export const useStore = create<KeyframeStore>()(
             caption: 'Frame 1',
             status: 'empty',
           };
-          set({ 
+          return { 
+            ...recordHistory(state),
             selectedTemplateId: 'freeform', 
             frames: [initialFrame],
             selectedFrameId: initialFrame.id,
-          });
-          return;
+          };
         }
         
         const template = getTemplateById(templateId, state.customTemplates);
-        if (!template) return;
+        if (!template) return state;
         
         const frames: StoryboardFrame[] = template.frames.map(beat => ({
           id: `frame-${beat.id}`,
@@ -144,17 +205,19 @@ export const useStore = create<KeyframeStore>()(
           status: 'empty',
         }));
         
-        set({ 
+        return { 
+          ...recordHistory(state),
           selectedTemplateId: templateId, 
           frames,
           selectedFrameId: frames[0]?.id || null,
-        });
-      },
+        };
+      }),
       
       // Frame actions
       selectFrame: (frameId) => set({ selectedFrameId: frameId }),
       
       updateFrame: (frameId, updates) => set(state => ({
+        ...recordHistory(state),
         frames: state.frames.map(f => 
           f.id === frameId ? { ...f, ...updates } : f
         ),
@@ -170,6 +233,7 @@ export const useStore = create<KeyframeStore>()(
           status: 'empty',
         };
         return {
+          ...recordHistory(state),
           frames: [...state.frames, newFrame],
           selectedFrameId: newFrame.id,
         };
@@ -178,6 +242,7 @@ export const useStore = create<KeyframeStore>()(
       removeFrame: (frameId) => set(state => {
         const newFrames = state.frames.filter(f => f.id !== frameId);
         return {
+          ...recordHistory(state),
           frames: newFrames,
           selectedFrameId: state.selectedFrameId === frameId 
             ? newFrames[0]?.id || null 
@@ -190,11 +255,15 @@ export const useStore = create<KeyframeStore>()(
         const frames = [...state.frames];
         const [movedFrame] = frames.splice(fromIndex, 1);
         frames.splice(toIndex, 0, movedFrame);
-        return { frames };
+        return { 
+          ...recordHistory(state),
+          frames,
+        };
       }),
       
       // Style actions
       addReferenceImage: (base64) => set(state => ({
+        ...recordHistory(state),
         style: {
           ...state.style,
           referenceImages: [...state.style.referenceImages, base64].slice(0, 3),
@@ -202,6 +271,7 @@ export const useStore = create<KeyframeStore>()(
       })),
       
       removeReferenceImage: (index) => set(state => ({
+        ...recordHistory(state),
         style: {
           ...state.style,
           referenceImages: state.style.referenceImages.filter((_, i) => i !== index),
@@ -209,16 +279,19 @@ export const useStore = create<KeyframeStore>()(
       })),
       
       setStyleDescription: (description) => set(state => ({
+        ...recordHistory(state),
         style: { ...state.style, description },
       })),
       
       lockStyle: () => set(state => ({
+        ...recordHistory(state),
         style: { ...state.style, locked: true },
         currentPhase: 'cast',
       })),
       
       // Cast actions
       addCharacter: (character) => set(state => ({
+        ...recordHistory(state),
         characters: [
           ...state.characters,
           { ...character, id: `char-${Date.now()}` },
@@ -226,17 +299,22 @@ export const useStore = create<KeyframeStore>()(
       })),
       
       updateCharacter: (id, updates) => set(state => ({
+        ...recordHistory(state),
         characters: state.characters.map(c => 
           c.id === id ? { ...c, ...updates } : c
         ),
       })),
       
       removeCharacter: (id) => set(state => ({
+        ...recordHistory(state),
         characters: state.characters.filter(c => c.id !== id),
       })),
       
       // Project actions
-      resetProject: () => set(initialState),
+      resetProject: () => set(state => ({
+        ...recordHistory(state),
+        ...initialState,
+      })),
     }),
     {
       name: 'keyframe-storage',
@@ -258,7 +336,8 @@ export const useApiKey = () => useStore(state => state.apiKey);
 export const useCurrentPhase = () => useStore(state => state.currentPhase);
 export const useSelectedTemplate = () => {
   const templateId = useStore(state => state.selectedTemplateId);
-  return templateId ? getTemplateById(templateId) : undefined;
+  const customTemplates = useStore(state => state.customTemplates);
+  return templateId ? getTemplateById(templateId, customTemplates) : undefined;
 };
 export const useFrames = () => useStore(state => state.frames);
 export const useSelectedFrame = () => {
@@ -271,3 +350,5 @@ export const useCharacters = () => useStore(state => state.characters);
 export const useAuthSession = () => useStore(state => state.authSession);
 export const useAuthUser = () => useStore(state => state.authUser);
 export const useCustomTemplates = () => useStore(state => state.customTemplates);
+export const useCanUndo = () => useStore(state => state.history.length > 0);
+export const useCanRedo = () => useStore(state => state.future.length > 0);

@@ -1,110 +1,63 @@
 {
   "project": "Keyframe",
-  "branchName": "compound/collaborative-editing",
-  "description": "Sync storyboard state across tabs via storage events",
+  "branchName": "compound/undo-redo",
+  "description": "Add undo/redo stack for project edits",
   "tasks": [
     {
       "id": "T-001",
-      "title": "Create CollaborationProvider",
-      "description": "Add a provider that listens to storage events and rehydrates state.",
+      "title": "Add undo/redo state and actions",
+      "description": "Add history/future stacks and undo/redo actions to the store.",
       "acceptanceCriteria": [
-        "File src/components/CollaborationProvider.tsx exists",
-        "Uses window.addEventListener('storage', ...) for keyframe-storage",
-        "Calls useStore.persist.rehydrate() when keyframe-storage changes",
+        "Store includes history and future stacks",
+        "Store exposes undo() and redo() actions",
+        "Selectors export canUndo and canRedo",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Added CollaborationProvider with storage listener and rehydrate call."
+      "notes": "Added history/future stacks with undo/redo actions and selectors."
     },
     {
       "id": "T-002",
-      "title": "Guard storage rehydrate logic",
-      "description": "Avoid rehydrating on unrelated storage changes or null values.",
+      "title": "Record history for project mutations",
+      "description": "Capture snapshots before edits and clear redo stack.",
       "acceptanceCriteria": [
-        "Storage handler ignores events where key !== keyframe-storage",
-        "Storage handler ignores events with empty newValue",
+        "Template/frames/style/cast mutations push to history",
+        "Undo/redo restores prior project state",
+        "Redo stack clears on new edits",
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Ignored non-matching keys and empty newValue in storage handler."
+      "notes": "Project mutations now push snapshots and clear redo stack."
     },
     {
       "id": "T-003",
-      "title": "Wire CollaborationProvider in layout",
-      "description": "Wrap the app with CollaborationProvider for all routes.",
+      "title": "Add Undo/Redo controls to Header",
+      "description": "Add buttons and wire them to the store.",
       "acceptanceCriteria": [
-        "src/app/layout.tsx wraps children with CollaborationProvider",
-        "Run `npm run build` - exits with code 0"
+        "Header shows Undo and Redo buttons",
+        "Buttons disable when no history/future",
+        "Run `npm run build` - exits with code 0",
+        "agent-browser: open http://localhost:3000 - buttons visible"
       ],
       "priority": 3,
       "passes": true,
-      "notes": "Wrapped app with CollaborationProvider in layout."
+      "notes": "Added Undo/Redo buttons with disabled states."
     },
     {
       "id": "T-004",
-      "title": "Add sync indicator to Header",
-      "description": "Show a small sync status label in the Header.",
+      "title": "Browser test: undo/redo template changes",
+      "description": "Verify template switch can be undone and redone.",
       "acceptanceCriteria": [
-        "Header shows text \"Sync: On\"",
-        "Label uses text-xs and muted color",
-        "Run `npm run build` - exits with code 0"
+        "agent-browser: open http://localhost:3000 - page loads",
+        "agent-browser: select Problem → Solution template",
+        "agent-browser: click Undo - frames revert",
+        "agent-browser: click Redo - frames return to Problem → Solution"
       ],
       "priority": 4,
       "passes": true,
-      "notes": "Added Sync: On label to Header actions."
-    },
-    {
-      "id": "T-005",
-      "title": "Browser test: sync indicator visible",
-      "description": "Verify the sync indicator renders in the Header.",
-      "acceptanceCriteria": [
-        "agent-browser: open http://localhost:3000 - page loads",
-        "agent-browser: snapshot -i - Sync: On text visible"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Verified Sync: On visible via browser search highlight."
-    },
-    {
-      "id": "T-006",
-      "title": "Browser test: cross-tab template sync",
-      "description": "Verify template selection syncs across two tabs.",
-      "acceptanceCriteria": [
-        "agent-browser: open http://localhost:3000 - tab A loads",
-        "agent-browser: open http://localhost:3000 - tab B loads",
-        "agent-browser: in tab A, connect OpenAI with test-key-dev",
-        "agent-browser: in tab A, select Problem → Solution template",
-        "agent-browser: in tab B, template selection updates and frames reflect the template"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Tab A selection updated tab B frames to Before/During/After."
-    },
-    {
-      "id": "T-007",
-      "title": "Browser test: cross-tab template switch",
-      "description": "Verify another template switch syncs across tabs.",
-      "acceptanceCriteria": [
-        "agent-browser: in tab A, select Raskin Pitch template",
-        "agent-browser: in tab B, frames update to The Old World / The Shift / Winners & Losers"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Tab B updated to Raskin Pitch frames after switch."
-    },
-    {
-      "id": "T-008",
-      "title": "Browser test: sync persists after reload",
-      "description": "Verify tab B still shows updates after reload.",
-      "acceptanceCriteria": [
-        "agent-browser: reload tab B",
-        "agent-browser: frame list still reflects selected template"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "Playwright reload verified Raskin Pitch persisted after refresh."
+      "notes": "Undo reverted to Raskin Pitch frames; redo restored Problem → Solution."
     }
   ]
 }

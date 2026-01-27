@@ -163,4 +163,28 @@
 - **Learnings for future iterations:**
   - Playwright can validate reload when browser tool reload fails.
 ---
+## 2026-01-27 11:32:02 MST - T-001
+- Added undo/redo stacks with snapshot helper and actions in the store.
+- Files changed: src/lib/store.ts
+- **Learnings for future iterations:**
+  - Snapshot only ProjectState fields to avoid undoing auth session data.
+---
+## 2026-01-27 11:35:25 MST - T-002
+- Recorded history for template, frame, style, cast, and reset actions.
+- Files changed: src/lib/store.ts
+- **Learnings for future iterations:**
+  - Clear redo stack on any new mutation to keep history consistent.
+---
+## 2026-01-27 11:37:30 MST - T-003
+- Added Undo/Redo controls to the header and verified visibility in browser.
+- Files changed: src/components/Header.tsx
+- **Learnings for future iterations:**
+  - Place undo controls before auth actions to keep them accessible.
+---
+## 2026-01-27 11:38:33 MST - T-004
+- Verified undo/redo restores template state in the browser.
+- Files changed: none (browser verification only)
+- **Learnings for future iterations:**
+  - Undo returns to the immediate prior template selection.
+---
 
