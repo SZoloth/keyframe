@@ -61,4 +61,10 @@
 - **Learnings for future iterations:**
   - Use modal validation to prevent Supabase calls on invalid inputs.
 ---
+## 2026-01-27 09:31:45 MST - T-001
+- Added CollaborationProvider to rehydrate state on storage events.
+- Files changed: src/components/CollaborationProvider.tsx
+- **Learnings for future iterations:**
+  - Storage events only fire on other tabs, so rehydrate targets cross-tab sync.
+---
 
