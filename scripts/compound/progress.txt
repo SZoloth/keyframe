@@ -49,4 +49,10 @@
 - **Learnings for future iterations:**
   - Keep cloud menu state local to Header to avoid global churn.
 ---
+## 2026-01-27 08:21:08 MST - T-009
+- Verified logged-out state shows disabled cloud controls and no console errors.
+- Files changed: src/lib/supabase.ts
+- **Learnings for future iterations:**
+  - Prefer console info/warn for missing config to avoid false error signals.
+---
 

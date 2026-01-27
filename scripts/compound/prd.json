@@ -134,8 +134,8 @@
         "agent-browser: console - no Supabase errors"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Logged-out state verified with disabled cloud actions and clean console."
     },
     {
       "id": "T-010",
