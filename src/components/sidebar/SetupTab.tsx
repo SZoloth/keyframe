@@ -16,6 +16,30 @@ export function SetupTab() {
   const [keyInput, setKeyInput] = useState('');
   const [validating, setValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [customTemplateName, setCustomTemplateName] = useState('');
+  const [customTemplateDescription, setCustomTemplateDescription] = useState('');
+  const [customBeats, setCustomBeats] = useState<Array<{ title: string; guidance: string }>>([
+    { title: '', guidance: '' },
+  ]);
+
+  const addCustomBeat = () => {
+    setCustomBeats((beats) => [...beats, { title: '', guidance: '' }]);
+  };
+
+  const removeCustomBeat = (index: number) => {
+    setCustomBeats((beats) => beats.filter((_, i) => i !== index));
+  };
+
+  const updateCustomBeat = (
+    index: number,
+    field: 'title' | 'guidance',
+    value: string
+  ) => {
+    setCustomBeats((beats) =>
+      beats.map((beat, i) => (i === index ? { ...beat, [field]: value } : beat))
+    );
+  };
   
   const validateApiKey = async () => {
     if (!keyInput.trim()) return;

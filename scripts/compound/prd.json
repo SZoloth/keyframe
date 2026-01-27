@@ -41,8 +41,8 @@
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added custom template form state and beat handlers in SetupTab."
     },
     {
       "id": "T-004",

@@ -73,4 +73,10 @@
 - **Learnings for future iterations:**
   - Use store state to resolve custom templates in selectTemplate.
 ---
+## 2026-01-27 08:49:39 MST - T-003
+- Added custom template form state and beat handlers in SetupTab.
+- Files changed: src/components/sidebar/SetupTab.tsx
+- **Learnings for future iterations:**
+  - Initialize custom beats with one empty entry for simpler UI.
+---
 
