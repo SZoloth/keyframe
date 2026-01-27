@@ -27,8 +27,8 @@
         "Run `npm run build` - exits with code 0"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Ignored non-matching keys and empty newValue in storage handler."
     },
     {
       "id": "T-003",

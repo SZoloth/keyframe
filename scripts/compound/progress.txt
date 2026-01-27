@@ -67,4 +67,10 @@
 - **Learnings for future iterations:**
   - Storage events only fire on other tabs, so rehydrate targets cross-tab sync.
 ---
+## 2026-01-27 09:32:56 MST - T-002
+- Guarded storage rehydrate against unrelated keys and empty values.
+- Files changed: src/components/CollaborationProvider.tsx
+- **Learnings for future iterations:**
+  - Ignore null newValue to avoid rehydrating on localStorage clears.
+---
 

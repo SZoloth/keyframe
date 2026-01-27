@@ -11,6 +11,7 @@ export function CollaborationProvider({ children }: CollaborationProviderProps) 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== 'keyframe-storage') return;
+      if (!event.newValue) return;
       useStore.persist.rehydrate();
     };
 
