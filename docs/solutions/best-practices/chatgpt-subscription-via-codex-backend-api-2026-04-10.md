@@ -1,6 +1,7 @@
 ---
 title: Using ChatGPT subscriptions in third-party apps via the Codex Backend API
 date: 2026-04-10
+last_updated: 2026-04-10
 category: best-practices
 module: OpenAIService
 problem_type: best_practice
@@ -18,6 +19,8 @@ tags:
   - responses-api
   - dual-routing
   - authentication
+  - sse
+  - streaming
 ---
 
 # Using ChatGPT subscriptions in third-party apps via the Codex Backend API
@@ -51,7 +54,10 @@ enum Endpoint {
 
 ### Codex Backend API requirements
 
-The Codex Backend endpoint uses the **Responses API** format, not Chat Completions:
+The Codex Backend endpoint uses the **Responses API** format, not Chat Completions. Two critical constraints discovered through production failures:
+
+1. **`stream` must be `true`** — the Codex Backend rejects `stream: false` with a 400 error: *"Stream must be set to true"*. This means you must implement Server-Sent Events (SSE) parsing for every call.
+2. **Model selection differs from Platform API** — the Codex Backend does not support `gpt-4o`. Use `gpt-5.4-mini` (or `gpt-5.4`, `gpt-5.3-codex`, `gpt-5.2`). Sending `gpt-4o` returns a 400 error: *"The 'gpt-4o' model is not supported when using Codex with a ChatGPT account."*
 
 ```swift
 // Headers
@@ -60,10 +66,10 @@ The Codex Backend endpoint uses the **Responses API** format, not Chat Completio
 
 // Body (text completion)
 {
-    "model": "gpt-4o",
+    "model": "gpt-5.4-mini",
     "instructions": "<system prompt>",
     "store": false,
-    "stream": false,
+    "stream": true,
     "input": [
         {"role": "user", "content": [{"type": "input_text", "text": "<user message>"}]}
     ]
@@ -71,10 +77,10 @@ The Codex Backend endpoint uses the **Responses API** format, not Chat Completio
 
 // Body (image generation — uses tools array)
 {
-    "model": "gpt-4o",
+    "model": "gpt-5.4-mini",
     "instructions": "Generate the requested image.",
     "store": false,
-    "stream": false,
+    "stream": true,
     "input": [
         {"role": "user", "content": [{"type": "input_text", "text": "<prompt>"}]}
     ],
@@ -82,6 +88,15 @@ The Codex Backend endpoint uses the **Responses API** format, not Chat Completio
         {"type": "image_generation", "quality": "medium", "size": "1024x1024"}
     ]
 }
+```
+
+### Model defaults by endpoint
+
+Keep separate defaults so the right model is always selected:
+
+```swift
+static let platformDefaultModel = "gpt-4o"       // Platform API (api.openai.com)
+static let codexDefaultModel = "gpt-5.4-mini"    // Codex Backend (chatgpt.com)
 ```
 
 ### Extracting the account ID from JWT
@@ -115,13 +130,54 @@ The Responses API uses a flat `image_url` string for vision input (different fro
 ["type": "image_url", "image_url": ["url": "data:image/png;base64,<b64>"]]
 ```
 
-### Response parsing
+### SSE response parsing (required)
 
-The Codex Backend returns Responses API format. Text lives under `output[].content[].text` with type `output_text`, or in a top-level `output_text` field. Image data comes from `output[]` items with type `image_generation_call` and a `result` field containing base64-encoded image data.
+Since `stream: true` is mandatory, every Codex Backend response arrives as a Server-Sent Events stream. The stream contains multiple event types; the two that carry final results:
 
-### stream parameter
+- **`response.completed`** — contains the full response JSON with all outputs. Prefer this when present.
+- **`response.output_item.done`** — contains individual completed output items. Use as a fallback when `response.completed` is absent.
 
-`stream` is **optional** in the Responses API and defaults to `false`. Setting `stream: false` is valid and returns the complete response in a single JSON payload. Only use `stream: true` if you need incremental output.
+```swift
+static func parseSSEResponse(lines: [String]) throws -> Data {
+    var currentEvent = ""
+    var completedData: Data?
+    var lastOutputItemDoneData: Data?
+
+    for line in lines {
+        if line.hasPrefix("event: ") {
+            currentEvent = String(line.dropFirst(7))
+        } else if line.hasPrefix("data: ") {
+            let payload = String(line.dropFirst(6))
+            guard let data = payload.data(using: .utf8) else { continue }
+
+            switch currentEvent {
+            case "response.completed":
+                completedData = data
+            case "response.output_item.done":
+                lastOutputItemDoneData = data
+            default:
+                break
+            }
+        }
+    }
+
+    if let finalData = completedData { return finalData }
+
+    // Fallback: unwrap output_item.done for image generation
+    if let itemData = lastOutputItemDoneData,
+       let eventJson = try? JSONSerialization.jsonObject(with: itemData) as? [String: Any] {
+        let item = (eventJson["item"] as? [String: Any]) ?? eventJson
+        let wrapped: [String: Any] = ["output": [item]]
+        return try JSONSerialization.data(withJSONObject: wrapped)
+    }
+
+    throw ServiceError.noContent
+}
+```
+
+**Text extraction**: Text lives under `output[].content[].text` with type `output_text`, or in a top-level `output_text` field.
+
+**Image extraction**: Image data comes from `output[]` items with type `image_generation_call` and a `result` field containing base64-encoded image data. Note that `response.output_item.done` may nest the actual item under an `"item"` key — the parser above handles both flat and nested structures.
 
 ## Why This Matters
 
@@ -184,6 +240,7 @@ private func textCompletion(system: String, user: String, model: String) async t
 
 ## Related
 
+- `docs/solutions/integration-issues/codex-backend-streaming-and-model-errors-2026-04-10.md` — bug track doc covering the specific failures that led to these corrections
 - `docs/solutions/integration-issues/openai-image-url-expiration-2026-04-10.md` — related OpenAI API integration pattern (b64_json for persistence)
 - [Open Interpreter](https://github.com/openinterpreter/open-interpreter) — reference implementation using this pattern
 - [OpenAI Responses API docs](https://platform.openai.com/docs/api-reference/responses/create) — official API reference for the payload format

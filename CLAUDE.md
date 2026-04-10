@@ -54,7 +54,7 @@ Keyframe/
     PDFExporter.swift           # PDF generation via PDFKit
     ProjectFileManager.swift    # .keyframe file save/load
   Views/                        # SwiftUI views (Setup, Style, Cast, Canvas, Chat, etc.)
-KeyframeTests/                  # 50 tests across 5 suites
+KeyframeTests/                  # 160 tests across 14 suites
 docs/
   plans/                        # Implementation plans with YAML frontmatter
   solutions/                    # Documented solutions and learnings (YAML frontmatter, searchable by module/tags/problem_type)
@@ -79,7 +79,7 @@ project.yml                     # XcodeGen project definition
 
 ## Testing
 
-Swift Testing framework (`@Test`, `#expect`, `@Suite`). 118 tests across 12 suites covering state mutations, undo/redo, auth flows, Responses API parsing, project serialization, frame operations, and screen-by-screen flow tests. Run with `xcodebuild test`.
+Swift Testing framework (`@Test`, `#expect`, `@Suite`). 160 tests across 14 suites covering state mutations, undo/redo, auth flows, endpoint routing, Responses API parsing, SSE stream parsing, project serialization, frame operations, phase gating, and end-to-end flow tests (both Platform API and Codex Backend paths). Run with `xcodebuild test`.
 
 ## Important notes
 

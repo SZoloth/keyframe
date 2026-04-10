@@ -84,6 +84,36 @@ struct CastFlowTests {
         #expect(state.project.characters.count == 1)
     }
 
+    @Test func addCharacterWithEmptyVisualDescription() {
+        let state = AppState()
+        let char = StoryboardCharacter(name: "Sarah", role: "Manager", visualDescription: "")
+        state.addCharacter(char)
+
+        #expect(state.project.characters.count == 1)
+        #expect(state.project.characters[0].name == "Sarah")
+        #expect(state.project.characters[0].visualDescription == "")
+    }
+
+    @Test func characterWithReferenceImageData() {
+        let state = AppState()
+        let imgData = Data([0xFF, 0xD8, 0xFF])
+        let char = StoryboardCharacter(name: "Hero", role: "Lead", visualDescription: "Tall", referenceImageData: imgData)
+        state.addCharacter(char)
+
+        #expect(state.project.characters[0].referenceImageData == imgData)
+    }
+
+    @Test func updateCharacterReferenceImage() {
+        let state = AppState()
+        let char = StoryboardCharacter(name: "A", role: "R", visualDescription: "V")
+        state.addCharacter(char)
+
+        let imgData = Data([0x89, 0x50, 0x4E, 0x47])
+        state.updateCharacter(char.id, referenceImageData: imgData)
+
+        #expect(state.project.characters[0].referenceImageData == imgData)
+    }
+
     @Test func canAdvanceToFramesRequiresCharacters() {
         let state = AppState()
         #expect(state.canAdvanceToPhase(.frames) == false)

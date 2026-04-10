@@ -218,7 +218,6 @@ struct CharacterFormView: View {
 
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !role.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !visualDescription.trimmingCharacters(in: .whitespaces).isEmpty
+        !role.trimmingCharacters(in: .whitespaces).isEmpty
     }
 }

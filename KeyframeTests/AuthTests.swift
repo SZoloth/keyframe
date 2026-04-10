@@ -161,6 +161,49 @@ struct AuthTests {
         manager.logout()
     }
 
+    // MARK: - Auth mode to endpoint routing
+
+    @MainActor @Test func apiKeyAuthModeRoutesPlatform() {
+        let manager = AuthManager()
+        manager.loginWithAPIKey("sk-route-test")
+        let mode = manager.resolveAuthMode()
+        if case .apiKey(let key) = mode {
+            #expect(key == "sk-route-test")
+        } else {
+            Issue.record("Expected .apiKey mode")
+        }
+        manager.logout()
+    }
+
+    @MainActor @Test func oauthAuthModeRoutesCodexBackend() {
+        let manager = AuthManager()
+        let tokens = CodexDetector.DetectedTokens(
+            accessToken: "tok-route",
+            refreshToken: "rt-route",
+            accountId: "acc-route"
+        )
+        manager.loginWithCodexTokens(tokens)
+        let mode = manager.resolveAuthMode()
+        if case .oauth(let access, _, let accountId) = mode {
+            #expect(access == "tok-route")
+            #expect(accountId == "acc-route")
+        } else {
+            Issue.record("Expected .oauth mode")
+        }
+        manager.logout()
+    }
+
+    @MainActor @Test func logoutClearsAllCredentials() {
+        let manager = AuthManager()
+        manager.loginWithAPIKey("sk-clear-test")
+        #expect(manager.status == .authenticated)
+
+        manager.logout()
+        #expect(manager.resolveAuthMode() == .none)
+        #expect(manager.storedAPIKey() == nil)
+        #expect(manager.storedOAuthTokens() == nil)
+    }
+
     // MARK: - PKCE helpers
 
     @Test func base64URLEncodingRemovesPaddingAndSpecialChars() {

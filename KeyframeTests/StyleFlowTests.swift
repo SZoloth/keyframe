@@ -95,6 +95,39 @@ struct StyleFlowTests {
         #expect(state.canAdvanceToPhase(.cast) == false)
     }
 
+    @Test func lockStyleWithDescriptionOnlyNoImages() {
+        let state = AppState()
+        state.authMode = .apiKey("sk-test")
+        state.setPhase(.style)
+
+        state.setStyleDescription("Bold ink lines with flat color fills")
+        state.lockStyle()
+
+        #expect(state.project.style.locked == true)
+        #expect(state.project.style.referenceImages.isEmpty)
+        #expect(state.project.currentPhase == .cast)
+    }
+
+    @Test func lockStyleWithImagesOnlyNoDescription() {
+        let state = AppState()
+        state.addReferenceImage(Data([0x89, 0x50]))
+        state.lockStyle()
+
+        #expect(state.project.style.locked == true)
+        #expect(state.project.style.description.isEmpty)
+        #expect(state.project.currentPhase == .cast)
+    }
+
+    @Test func lockStyleWithBothImagesAndDescription() {
+        let state = AppState()
+        state.addReferenceImage(Data([1]))
+        state.setStyleDescription("Anime style")
+        state.lockStyle()
+
+        #expect(state.project.style.locked == true)
+        #expect(state.project.currentPhase == .cast)
+    }
+
     @Test func fullStyleFlowFromImageToLock() {
         let state = AppState()
         state.authMode = .apiKey("sk-test")

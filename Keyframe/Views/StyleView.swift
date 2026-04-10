@@ -271,8 +271,9 @@ struct StyleView: View {
     }
 
     private var canLock: Bool {
-        !appState.project.style.referenceImages.isEmpty &&
-        (!appState.project.style.description.isEmpty || !styleDescriptionDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        !appState.project.style.referenceImages.isEmpty ||
+        !appState.project.style.description.isEmpty ||
+        !styleDescriptionDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     // MARK: - API calls

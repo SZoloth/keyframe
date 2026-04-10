@@ -32,13 +32,13 @@ actor OpenAIService {
         }
     }
 
-    private var endpoint: Endpoint?
+    private(set) var endpoint: Endpoint?
 
     func configure(endpoint: Endpoint) {
         self.endpoint = endpoint
     }
 
-    private var oauthMissingAccountId = false
+    private(set) var oauthMissingAccountId = false
 
     func configure(authMode: AuthMode) {
         oauthMissingAccountId = false
@@ -194,10 +194,12 @@ actor OpenAIService {
 
     // MARK: - Unified text completion (routes by endpoint type)
 
+    static let platformDefaultModel = "gpt-4o"
+    static let codexDefaultModel = "gpt-5.4-mini"
+
     private func textCompletion(
         system: String,
         user: String,
-        model: String = "gpt-4o",
         maxTokens: Int = 300
     ) async throws -> String {
         let ep = try requireEndpoint()
@@ -205,11 +207,13 @@ actor OpenAIService {
         switch ep {
         case .platform(let apiKey):
             return try await platformChatCompletion(
-                system: system, user: user, model: model, maxTokens: maxTokens, apiKey: apiKey
+                system: system, user: user, model: Self.platformDefaultModel,
+                maxTokens: maxTokens, apiKey: apiKey
             )
         case .codexBackend(let token, let accountId):
             return try await codexTextCompletion(
-                system: system, user: user, model: model, accessToken: token, accountId: accountId
+                system: system, user: user, model: Self.codexDefaultModel,
+                accessToken: token, accountId: accountId
             )
         }
     }
@@ -219,7 +223,6 @@ actor OpenAIService {
     private func visionCompletion(
         userText: String,
         images: [Data],
-        model: String = "gpt-4o",
         maxTokens: Int = 500
     ) async throws -> String {
         let ep = try requireEndpoint()
@@ -227,11 +230,13 @@ actor OpenAIService {
         switch ep {
         case .platform(let apiKey):
             return try await platformVisionCompletion(
-                userText: userText, images: images, model: model, maxTokens: maxTokens, apiKey: apiKey
+                userText: userText, images: images, model: Self.platformDefaultModel,
+                maxTokens: maxTokens, apiKey: apiKey
             )
         case .codexBackend(let token, let accountId):
             return try await codexVisionCompletion(
-                userText: userText, images: images, model: model, accessToken: token, accountId: accountId
+                userText: userText, images: images, model: Self.codexDefaultModel,
+                accessToken: token, accountId: accountId
             )
         }
     }
@@ -245,7 +250,10 @@ actor OpenAIService {
         case .platform(let apiKey):
             return try await platformImageGeneration(prompt: prompt, apiKey: apiKey)
         case .codexBackend(let token, let accountId):
-            return try await codexImageGeneration(prompt: prompt, accessToken: token, accountId: accountId)
+            return try await codexImageGeneration(
+                prompt: prompt, model: Self.codexDefaultModel,
+                accessToken: token, accountId: accountId
+            )
         }
     }
 
@@ -366,13 +374,13 @@ actor OpenAIService {
             "model": model,
             "instructions": system,
             "store": false,
-            "stream": false,
+            "stream": true,
             "input": [
                 ["role": "user", "content": [["type": "input_text", "text": user]]]
             ],
         ]
 
-        let data = try await post(
+        let data = try await postStreaming(
             url: Self.codexResponsesURL,
             body: body,
             headers: codexHeaders(accessToken: accessToken, accountId: accountId)
@@ -399,13 +407,13 @@ actor OpenAIService {
             "model": model,
             "instructions": "You are a visual style analyst.",
             "store": false,
-            "stream": false,
+            "stream": true,
             "input": [
                 ["role": "user", "content": contentArray]
             ],
         ]
 
-        let data = try await post(
+        let data = try await postStreaming(
             url: Self.codexResponsesURL,
             body: body,
             headers: codexHeaders(accessToken: accessToken, accountId: accountId)
@@ -415,13 +423,13 @@ actor OpenAIService {
     }
 
     private func codexImageGeneration(
-        prompt: String, model: String = "gpt-4o", accessToken: String, accountId: String
+        prompt: String, model: String, accessToken: String, accountId: String
     ) async throws -> Data {
         let body: [String: Any] = [
             "model": model,
             "instructions": "Generate the requested image.",
             "store": false,
-            "stream": false,
+            "stream": true,
             "input": [
                 ["role": "user", "content": [["type": "input_text", "text": prompt]]]
             ],
@@ -430,7 +438,7 @@ actor OpenAIService {
             ],
         ]
 
-        let data = try await post(
+        let data = try await postStreaming(
             url: Self.codexResponsesURL,
             body: body,
             headers: codexHeaders(accessToken: accessToken, accountId: accountId)
@@ -487,6 +495,83 @@ actor OpenAIService {
     // MARK: - HTTP
 
     private func post(url: String, body: [String: Any], headers: [String: String]) async throws -> Data {
+        let request = try buildRequest(url: url, body: body, headers: headers)
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let httpResponse = response as? HTTPURLResponse,
+           !(200...299).contains(httpResponse.statusCode) {
+            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw ServiceError.httpError(httpResponse.statusCode, errorBody)
+        }
+
+        return data
+    }
+
+    /// POST with `stream: true` — collects SSE events, returns the `response.completed` payload.
+    private func postStreaming(url: String, body: [String: Any], headers: [String: String]) async throws -> Data {
+        var request = try buildRequest(url: url, body: body, headers: headers)
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+
+        if let httpResponse = response as? HTTPURLResponse,
+           !(200...299).contains(httpResponse.statusCode) {
+            var errorChunks = Data()
+            for try await byte in bytes { errorChunks.append(byte) }
+            let errorBody = String(data: errorChunks, encoding: .utf8) ?? "Unknown error"
+            throw ServiceError.httpError(httpResponse.statusCode, errorBody)
+        }
+
+        var lines: [String] = []
+        for try await line in bytes.lines {
+            lines.append(line)
+        }
+
+        return try Self.parseSSEResponse(lines: lines)
+    }
+
+    /// Parse SSE event lines and extract the `response.completed` payload.
+    /// Falls back to `response.output_item.done` for image generation if no completed event.
+    static func parseSSEResponse(lines: [String]) throws -> Data {
+        var currentEvent = ""
+        var completedData: Data?
+        var lastOutputItemDoneData: Data?
+
+        for line in lines {
+            if line.hasPrefix("event: ") {
+                currentEvent = String(line.dropFirst(7))
+            } else if line.hasPrefix("data: ") {
+                let payload = String(line.dropFirst(6))
+                guard let data = payload.data(using: .utf8) else { continue }
+
+                switch currentEvent {
+                case "response.completed":
+                    completedData = data
+                case "response.output_item.done":
+                    lastOutputItemDoneData = data
+                default:
+                    break
+                }
+            }
+        }
+
+        if let finalData = completedData {
+            return finalData
+        }
+
+        // Fallback: wrap output_item.done data into a response-shaped object.
+        // The event data may have the item at top level or nested under an "item" key.
+        if let itemData = lastOutputItemDoneData,
+           let eventJson = try? JSONSerialization.jsonObject(with: itemData) as? [String: Any] {
+            let item = (eventJson["item"] as? [String: Any]) ?? eventJson
+            let wrapped: [String: Any] = ["output": [item]]
+            return try JSONSerialization.data(withJSONObject: wrapped)
+        }
+
+        throw ServiceError.noContent
+    }
+
+    private func buildRequest(url: String, body: [String: Any], headers: [String: String]) throws -> URLRequest {
         guard let requestURL = URL(string: url) else {
             throw ServiceError.httpError(0, "Invalid URL: \(url)")
         }
@@ -498,16 +583,7 @@ actor OpenAIService {
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 120
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        if let httpResponse = response as? HTTPURLResponse,
-           !(200...299).contains(httpResponse.statusCode) {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw ServiceError.httpError(httpResponse.statusCode, errorBody)
-        }
-
-        return data
+        return request
     }
 
     private func requireEndpoint() throws -> Endpoint {
