@@ -141,7 +141,7 @@ struct ChatView: View {
                 }
             }
             .padding(10)
-            .background(msg.role == .user ? Color.primary : Color(.quaternarySystemFill))
+            .background(msg.role == .user ? Color.accentColor : Color(.quaternarySystemFill))
             .foregroundStyle(msg.role == .user ? .white : .primary)
             .clipShape(RoundedRectangle(cornerRadius: 12))
 
@@ -158,8 +158,11 @@ struct ChatView: View {
                 Button {
                     generateImage(for: frame)
                 } label: {
-                    Text(loading ? "Generating..." : "Generate image")
-                        .frame(maxWidth: .infinity)
+                    HStack(spacing: 6) {
+                        if loading { ProgressView().controlSize(.small) }
+                        Text(loading ? "Generating image..." : "Generate image")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.primary)
@@ -184,8 +187,11 @@ struct ChatView: View {
                 Button {
                     generateImage(for: frame)
                 } label: {
-                    Text(loading ? "Generating..." : "Try again")
-                        .frame(maxWidth: .infinity)
+                    HStack(spacing: 6) {
+                        if loading { ProgressView().controlSize(.small) }
+                        Text(loading ? "Generating..." : "Try again")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .disabled(loading)

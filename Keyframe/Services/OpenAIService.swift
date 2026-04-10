@@ -3,21 +3,12 @@ import Foundation
 actor OpenAIService {
 
     enum Endpoint {
-        case standard(apiKey: String)
-        case oauth(accessToken: String)
+        case platform(apiKey: String)
+        case codexBackend(accessToken: String, accountId: String)
 
-        var baseURL: String {
-            switch self {
-            case .standard: return "https://api.openai.com/v1"
-            case .oauth: return "https://api.openai.com/v1"
-            }
-        }
-
-        var authHeader: String {
-            switch self {
-            case .standard(let key): return "Bearer \(key)"
-            case .oauth(let token): return "Bearer \(token)"
-            }
+        var isPlatform: Bool {
+            if case .platform = self { return true }
+            return false
         }
     }
 
@@ -27,6 +18,7 @@ actor OpenAIService {
         case decodingError(String)
         case imageGenerationFailed(String)
         case notAuthenticated
+        case missingAccountId
 
         var errorDescription: String? {
             switch self {
@@ -35,6 +27,7 @@ actor OpenAIService {
             case .decodingError(let msg): return "Failed to decode response: \(msg)"
             case .imageGenerationFailed(let msg): return "Image generation failed: \(msg)"
             case .notAuthenticated: return "Not authenticated"
+            case .missingAccountId: return "ChatGPT account ID not found. Please sign out and sign in again."
             }
         }
     }
@@ -45,14 +38,22 @@ actor OpenAIService {
         self.endpoint = endpoint
     }
 
+    private var oauthMissingAccountId = false
+
     func configure(authMode: AuthMode) {
+        oauthMissingAccountId = false
         switch authMode {
         case .none:
             endpoint = nil
         case .apiKey(let key):
-            endpoint = .standard(apiKey: key)
-        case .oauth(let accessToken, _):
-            endpoint = .oauth(accessToken: accessToken)
+            endpoint = .platform(apiKey: key)
+        case .oauth(let accessToken, _, let accountId):
+            if let accountId, !accountId.isEmpty {
+                endpoint = .codexBackend(accessToken: accessToken, accountId: accountId)
+            } else {
+                endpoint = nil
+                oauthMissingAccountId = true
+            }
         }
     }
 
@@ -106,7 +107,7 @@ actor OpenAIService {
         Describe the scene in 2-3 sentences. Be specific and visual.
         """
 
-        return try await chatCompletion(system: system, user: user)
+        return try await textCompletion(system: system, user: user)
     }
 
     // MARK: - Scene refinement
@@ -129,7 +130,7 @@ actor OpenAIService {
         Provide an updated scene description that incorporates the feedback. Keep it to 2-3 sentences.
         """
 
-        return try await chatCompletion(system: system, user: user)
+        return try await textCompletion(system: system, user: user)
     }
 
     // MARK: - Frame image generation
@@ -184,16 +185,38 @@ actor OpenAIService {
         Provide a concise but complete style description that could be used to generate consistent images in this style. Write it as a direct instruction, e.g., "Hand-drawn pencil sketch style with bold outlines..."
         """
 
-        return try await chatCompletionWithImages(
+        return try await visionCompletion(
             userText: prompt,
             images: referenceImages,
             maxTokens: 500
         )
     }
 
-    // MARK: - Chat completions
+    // MARK: - Unified text completion (routes by endpoint type)
 
-    private func chatCompletionWithImages(
+    private func textCompletion(
+        system: String,
+        user: String,
+        model: String = "gpt-4o",
+        maxTokens: Int = 300
+    ) async throws -> String {
+        let ep = try requireEndpoint()
+
+        switch ep {
+        case .platform(let apiKey):
+            return try await platformChatCompletion(
+                system: system, user: user, model: model, maxTokens: maxTokens, apiKey: apiKey
+            )
+        case .codexBackend(let token, let accountId):
+            return try await codexTextCompletion(
+                system: system, user: user, model: model, accessToken: token, accountId: accountId
+            )
+        }
+    }
+
+    // MARK: - Unified vision completion
+
+    private func visionCompletion(
         userText: String,
         images: [Data],
         model: String = "gpt-4o",
@@ -201,6 +224,65 @@ actor OpenAIService {
     ) async throws -> String {
         let ep = try requireEndpoint()
 
+        switch ep {
+        case .platform(let apiKey):
+            return try await platformVisionCompletion(
+                userText: userText, images: images, model: model, maxTokens: maxTokens, apiKey: apiKey
+            )
+        case .codexBackend(let token, let accountId):
+            return try await codexVisionCompletion(
+                userText: userText, images: images, model: model, accessToken: token, accountId: accountId
+            )
+        }
+    }
+
+    // MARK: - Unified image generation
+
+    private func imageGeneration(prompt: String) async throws -> Data {
+        let ep = try requireEndpoint()
+
+        switch ep {
+        case .platform(let apiKey):
+            return try await platformImageGeneration(prompt: prompt, apiKey: apiKey)
+        case .codexBackend(let token, let accountId):
+            return try await codexImageGeneration(prompt: prompt, accessToken: token, accountId: accountId)
+        }
+    }
+
+    // MARK: - Platform API (api.openai.com — used with API keys)
+
+    private func platformChatCompletion(
+        system: String, user: String, model: String, maxTokens: Int, apiKey: String
+    ) async throws -> String {
+        let body: [String: Any] = [
+            "model": model,
+            "messages": [
+                ["role": "system", "content": system],
+                ["role": "user", "content": user],
+            ],
+            "max_tokens": maxTokens,
+        ]
+
+        let data = try await post(
+            url: "https://api.openai.com/v1/chat/completions",
+            body: body,
+            headers: ["Authorization": "Bearer \(apiKey)"]
+        )
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let choices = json["choices"] as? [[String: Any]],
+              let message = choices.first?["message"] as? [String: Any],
+              let content = message["content"] as? String
+        else {
+            throw ServiceError.noContent
+        }
+
+        return content.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func platformVisionCompletion(
+        userText: String, images: [Data], model: String, maxTokens: Int, apiKey: String
+    ) async throws -> String {
         var contentArray: [[String: Any]] = [
             ["type": "text", "text": userText]
         ]
@@ -221,9 +303,9 @@ actor OpenAIService {
         ]
 
         let data = try await post(
-            url: "\(ep.baseURL)/chat/completions",
+            url: "https://api.openai.com/v1/chat/completions",
             body: body,
-            auth: ep.authHeader
+            headers: ["Authorization": "Bearer \(apiKey)"]
         )
 
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -237,49 +319,9 @@ actor OpenAIService {
         return content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func chatCompletion(
-        system: String,
-        user: String,
-        model: String = "gpt-4o",
-        maxTokens: Int = 300
-    ) async throws -> String {
-        let ep = try requireEndpoint()
-
-        let body: [String: Any] = [
-            "model": model,
-            "messages": [
-                ["role": "system", "content": system],
-                ["role": "user", "content": user],
-            ],
-            "max_tokens": maxTokens,
-        ]
-
-        let data = try await post(
-            url: "\(ep.baseURL)/chat/completions",
-            body: body,
-            auth: ep.authHeader
-        )
-
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let choices = json["choices"] as? [[String: Any]],
-              let message = choices.first?["message"] as? [String: Any],
-              let content = message["content"] as? String
-        else {
-            throw ServiceError.noContent
-        }
-
-        return content.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    // MARK: - Image generation
-
-    private func imageGeneration(
-        prompt: String,
-        model: String = "gpt-image-1",
-        size: String = "1024x1024"
+    private func platformImageGeneration(
+        prompt: String, apiKey: String, model: String = "gpt-image-1", size: String = "1024x1024"
     ) async throws -> Data {
-        let ep = try requireEndpoint()
-
         let body: [String: Any] = [
             "model": model,
             "prompt": prompt,
@@ -289,9 +331,9 @@ actor OpenAIService {
         ]
 
         let data = try await post(
-            url: "\(ep.baseURL)/images/generations",
+            url: "https://api.openai.com/v1/images/generations",
             body: body,
-            auth: ep.authHeader
+            headers: ["Authorization": "Bearer \(apiKey)"]
         )
 
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -306,16 +348,154 @@ actor OpenAIService {
         return imageData
     }
 
+    // MARK: - Codex Backend API (chatgpt.com — used with ChatGPT subscription)
+
+    private static let codexResponsesURL = "https://chatgpt.com/backend-api/codex/responses"
+
+    private func codexHeaders(accessToken: String, accountId: String) -> [String: String] {
+        [
+            "Authorization": "Bearer \(accessToken)",
+            "chatgpt-account-id": accountId,
+        ]
+    }
+
+    private func codexTextCompletion(
+        system: String, user: String, model: String, accessToken: String, accountId: String
+    ) async throws -> String {
+        let body: [String: Any] = [
+            "model": model,
+            "instructions": system,
+            "store": false,
+            "stream": false,
+            "input": [
+                ["role": "user", "content": [["type": "input_text", "text": user]]]
+            ],
+        ]
+
+        let data = try await post(
+            url: Self.codexResponsesURL,
+            body: body,
+            headers: codexHeaders(accessToken: accessToken, accountId: accountId)
+        )
+
+        return try extractTextFromResponsesAPI(data: data)
+    }
+
+    private func codexVisionCompletion(
+        userText: String, images: [Data], model: String, accessToken: String, accountId: String
+    ) async throws -> String {
+        var contentArray: [[String: Any]] = [
+            ["type": "input_text", "text": userText]
+        ]
+        for imageData in images {
+            let b64 = imageData.base64EncodedString()
+            contentArray.append([
+                "type": "input_image",
+                "image_url": "data:image/png;base64,\(b64)"
+            ])
+        }
+
+        let body: [String: Any] = [
+            "model": model,
+            "instructions": "You are a visual style analyst.",
+            "store": false,
+            "stream": false,
+            "input": [
+                ["role": "user", "content": contentArray]
+            ],
+        ]
+
+        let data = try await post(
+            url: Self.codexResponsesURL,
+            body: body,
+            headers: codexHeaders(accessToken: accessToken, accountId: accountId)
+        )
+
+        return try extractTextFromResponsesAPI(data: data)
+    }
+
+    private func codexImageGeneration(
+        prompt: String, model: String = "gpt-4o", accessToken: String, accountId: String
+    ) async throws -> Data {
+        let body: [String: Any] = [
+            "model": model,
+            "instructions": "Generate the requested image.",
+            "store": false,
+            "stream": false,
+            "input": [
+                ["role": "user", "content": [["type": "input_text", "text": prompt]]]
+            ],
+            "tools": [
+                ["type": "image_generation", "quality": "medium", "size": "1024x1024"]
+            ],
+        ]
+
+        let data = try await post(
+            url: Self.codexResponsesURL,
+            body: body,
+            headers: codexHeaders(accessToken: accessToken, accountId: accountId)
+        )
+
+        return try extractImageFromResponsesAPI(data: data)
+    }
+
+    // MARK: - Responses API parsing
+
+    func extractTextFromResponsesAPI(data: Data) throws -> String {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw ServiceError.noContent
+        }
+
+        if let output = json["output"] as? [[String: Any]] {
+            let texts = output.compactMap { item -> String? in
+                guard item["type"] as? String == "message" else { return nil }
+                guard let content = item["content"] as? [[String: Any]] else { return nil }
+                return content.compactMap { part -> String? in
+                    guard part["type"] as? String == "output_text" else { return nil }
+                    return part["text"] as? String
+                }.joined()
+            }
+            let result = texts.joined()
+            if !result.isEmpty { return result.trimmingCharacters(in: .whitespacesAndNewlines) }
+        }
+
+        if let output_text = json["output_text"] as? String, !output_text.isEmpty {
+            return output_text.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        throw ServiceError.noContent
+    }
+
+    func extractImageFromResponsesAPI(data: Data) throws -> Data {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let output = json["output"] as? [[String: Any]]
+        else {
+            throw ServiceError.imageGenerationFailed("No output in response")
+        }
+
+        for item in output {
+            if item["type"] as? String == "image_generation_call",
+               let b64 = item["result"] as? String,
+               let imageData = Data(base64Encoded: b64) {
+                return imageData
+            }
+        }
+
+        throw ServiceError.imageGenerationFailed("No image data in response output")
+    }
+
     // MARK: - HTTP
 
-    private func post(url: String, body: [String: Any], auth: String) async throws -> Data {
+    private func post(url: String, body: [String: Any], headers: [String: String]) async throws -> Data {
         guard let requestURL = URL(string: url) else {
             throw ServiceError.httpError(0, "Invalid URL: \(url)")
         }
         var request = URLRequest(url: requestURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(auth, forHTTPHeaderField: "Authorization")
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 120
 
@@ -331,7 +511,9 @@ actor OpenAIService {
     }
 
     private func requireEndpoint() throws -> Endpoint {
-        guard let endpoint else { throw ServiceError.notAuthenticated }
+        guard let endpoint else {
+            throw oauthMissingAccountId ? ServiceError.missingAccountId : ServiceError.notAuthenticated
+        }
         return endpoint
     }
 }

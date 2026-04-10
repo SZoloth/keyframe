@@ -23,14 +23,33 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.szoloth.keyframe
         PRODUCT_NAME: Keyframe
-        INFOPLIST_KEY_CFBundleDisplayName: Keyframe
-        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.graphics-design
-        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Keyframe/Resources/Info.plist
         SWIFT_EMIT_LOC_STRINGS: YES
         CODE_SIGN_ENTITLEMENTS: Keyframe/Resources/Keyframe.entitlements
         ENABLE_PREVIEWS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
     entitlements:
       path: Keyframe/Resources/Keyframe.entitlements
+    info:
+      path: Keyframe/Resources/Info.plist
+      properties:
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.keyframe.project
+            UTTypeDescription: Keyframe Project
+            UTTypeConformsTo:
+              - public.json
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - keyframe
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Keyframe Project
+            CFBundleTypeRole: Editor
+            LSHandlerRank: Owner
+            LSItemContentTypes:
+              - com.keyframe.project
 
   KeyframeTests:
     type: bundle.unit-test

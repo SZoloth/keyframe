@@ -4,7 +4,7 @@ import Observation
 enum AuthMode: Equatable {
     case none
     case apiKey(String)
-    case oauth(accessToken: String, refreshToken: String?)
+    case oauth(accessToken: String, refreshToken: String?, accountId: String?)
 }
 
 @MainActor

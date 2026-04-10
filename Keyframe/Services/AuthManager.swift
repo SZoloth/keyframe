@@ -42,6 +42,9 @@ final class AuthManager {
             if let refresh = tokens.refreshToken {
                 try KeychainService.save(.oauthRefreshToken, value: refresh)
             }
+            if let accountId = tokens.accountId {
+                try KeychainService.save(.oauthAccountId, value: accountId)
+            }
             status = .authenticated
         } catch is CancellationError {
             status = .idle
@@ -55,10 +58,11 @@ final class AuthManager {
         status = .idle
     }
 
-    func storedOAuthTokens() -> (accessToken: String, refreshToken: String?)? {
+    func storedOAuthTokens() -> (accessToken: String, refreshToken: String?, accountId: String?)? {
         guard let accessToken = KeychainService.load(.oauthAccessToken) else { return nil }
         let refreshToken = KeychainService.load(.oauthRefreshToken)
-        return (accessToken, refreshToken)
+        let accountId = KeychainService.load(.oauthAccountId)
+        return (accessToken, refreshToken, accountId)
     }
 
     func refreshOAuthToken() async -> Bool {
@@ -68,6 +72,9 @@ final class AuthManager {
             try KeychainService.save(.oauthAccessToken, value: tokens.accessToken)
             if let newRefresh = tokens.refreshToken {
                 try KeychainService.save(.oauthRefreshToken, value: newRefresh)
+            }
+            if let accountId = tokens.accountId {
+                try KeychainService.save(.oauthAccountId, value: accountId)
             }
             return true
         } catch {
@@ -87,6 +94,9 @@ final class AuthManager {
             if let refresh = tokens.refreshToken {
                 try KeychainService.save(.oauthRefreshToken, value: refresh)
             }
+            if let accountId = tokens.accountId {
+                try KeychainService.save(.oauthAccountId, value: accountId)
+            }
             status = .authenticated
         } catch {
             status = .failed(error.localizedDescription)
@@ -97,7 +107,7 @@ final class AuthManager {
 
     func resolveAuthMode() -> AuthMode {
         if let oauth = storedOAuthTokens() {
-            return .oauth(accessToken: oauth.accessToken, refreshToken: oauth.refreshToken)
+            return .oauth(accessToken: oauth.accessToken, refreshToken: oauth.refreshToken, accountId: oauth.accountId)
         }
         if let apiKey = storedAPIKey() {
             return .apiKey(apiKey)

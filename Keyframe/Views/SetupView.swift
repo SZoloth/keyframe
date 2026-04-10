@@ -11,6 +11,7 @@ struct SetupView: View {
     @Environment(AuthManager.self) private var authManager
     @State private var apiKeyInput = ""
     @State private var showAPIKeyField = false
+    @State private var showAPIKeyHelp = false
     @State private var codexDetected = false
     @State private var showCustomTemplateForm = false
     @State private var customName = ""
@@ -21,17 +22,28 @@ struct SetupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 Text("Setup")
-                    .font(.title2)
-                    .fontWeight(.semibold)
+                    .font(.title)
+                    .fontWeight(.bold)
 
                 authSection
                 templateSection
                 customTemplateSection
                 proceedButton
             }
-            .padding()
+            .padding(32)
+            .frame(maxWidth: 480, alignment: .leading)
+            .frame(maxWidth: .infinity)
         }
-        .onAppear(perform: checkCodexTokens)
+        .onAppear {
+            codexDetected = authManager.detectCodexTokens() != nil
+
+            if appState.authMode == .none {
+                let restored = authManager.resolveAuthMode()
+                if restored != .none {
+                    appState.authMode = restored
+                }
+            }
+        }
     }
 
     // MARK: - Auth
@@ -72,48 +84,76 @@ struct SetupView: View {
     @ViewBuilder
     private var authOptions: some View {
         VStack(spacing: 8) {
-            if codexDetected {
+            if case .authenticating = authManager.status {
+                authenticatingView
+            } else {
+                if codexDetected {
+                    Button {
+                        if let tokens = authManager.detectCodexTokens() {
+                            authManager.loginWithCodexTokens(tokens)
+                            appState.authMode = authManager.resolveAuthMode()
+                        }
+                    } label: {
+                        Label("Use Codex CLI session", systemImage: "terminal")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .controlSize(.large)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.primary)
+                }
+
                 Button {
-                    if let tokens = authManager.detectCodexTokens() {
-                        authManager.loginWithCodexTokens(tokens)
+                    Task {
+                        await authManager.loginWithOAuth()
                         appState.authMode = authManager.resolveAuthMode()
                     }
                 } label: {
-                    Label("Use Codex CLI session", systemImage: "terminal")
+                    Label("Sign in with ChatGPT", systemImage: "globe")
                         .frame(maxWidth: .infinity)
                 }
                 .controlSize(.large)
-                .buttonStyle(.borderedProminent)
-                .tint(.primary)
-            }
+                .buttonStyle(.bordered)
 
-            Button {
-                Task {
-                    await authManager.loginWithOAuth()
-                    appState.authMode = authManager.resolveAuthMode()
+                if showAPIKeyField {
+                    apiKeyField
+                } else {
+                    Button("Use API key instead") {
+                        showAPIKeyField = true
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
-            } label: {
-                Label("Sign in with ChatGPT", systemImage: "globe")
-                    .frame(maxWidth: .infinity)
-            }
-            .controlSize(.large)
-            .buttonStyle(.bordered)
-
-            if showAPIKeyField {
-                apiKeyField
-            } else {
-                Button("Use API key instead") {
-                    showAPIKeyField = true
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
 
             if case .failed(let msg) = authManager.status {
-                Text(msg)
+                Label(msg, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
                     .foregroundStyle(.red)
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.red.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
             }
+        }
+    }
+
+    private var authenticatingView: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Waiting for browser sign-in...")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+
+            Button("Cancel") {
+                Task { await authManager.cancelOAuth() }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -140,9 +180,36 @@ struct SetupView: View {
             }
             .controlSize(.small)
 
-            Text("Your key is stored in the macOS Keychain, never sent to our servers.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            HStack(spacing: 4) {
+                Text("Stored in macOS Keychain only.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+
+                Spacer()
+
+                Button {
+                    showAPIKeyHelp.toggle()
+                } label: {
+                    Label("How to get a key", systemImage: "questionmark.circle")
+                        .font(.caption2)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+
+            if showAPIKeyHelp {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("1. Go to platform.openai.com/api-keys")
+                    Text("2. Click \"Create new secret key\"")
+                    Text("3. Copy and paste it above")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary.opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
         }
         .padding(12)
         .background(.quaternary.opacity(0.5))
@@ -348,14 +415,4 @@ struct SetupView: View {
         BuiltInTemplates.all + appState.project.customTemplates
     }
 
-    private func checkCodexTokens() {
-        codexDetected = authManager.detectCodexTokens() != nil
-
-        if appState.authMode == .none {
-            let restored = authManager.resolveAuthMode()
-            if restored != .none {
-                appState.authMode = restored
-            }
-        }
-    }
 }

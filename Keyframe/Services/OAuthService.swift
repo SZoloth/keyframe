@@ -10,7 +10,7 @@ actor OAuthService {
         var redirectPort: UInt16 = 1455
         var scopes = "openid profile email offline_access"
 
-        var authorizationURL: String { "\(issuerBaseURL)/authorize" }
+        var authorizationURL: String { "\(issuerBaseURL)/oauth/authorize" }
         var tokenURL: String { "\(issuerBaseURL)/oauth/token" }
         var redirectURI: String { "http://localhost:\(redirectPort)/auth/callback" }
     }
@@ -20,6 +20,7 @@ actor OAuthService {
         let refreshToken: String?
         let idToken: String?
         let expiresIn: Int?
+        let accountId: String?
     }
 
     enum OAuthError: LocalizedError {
@@ -247,12 +248,45 @@ actor OAuthService {
             throw OAuthError.tokenExchangeFailed("No access_token in response")
         }
 
+        let idToken = json["id_token"] as? String
+        let accountId = idToken.flatMap(Self.extractAccountId) ?? Self.extractAccountId(from: accessToken)
+
         return Tokens(
             accessToken: accessToken,
             refreshToken: json["refresh_token"] as? String,
-            idToken: json["id_token"] as? String,
-            expiresIn: json["expires_in"] as? Int
+            idToken: idToken,
+            expiresIn: json["expires_in"] as? Int,
+            accountId: accountId
         )
+    }
+
+    // MARK: - JWT account ID extraction
+
+    /// Decode a JWT payload (no signature verification — the TLS channel provides integrity).
+    private static func decodeJWTPayload(_ jwt: String) -> [String: Any]? {
+        let parts = jwt.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var b64 = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64.append("=") }
+        guard let data = Data(base64Encoded: b64) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+
+    /// Try multiple claim paths used by OpenAI tokens.
+    private static func extractAccountId(from jwt: String) -> String? {
+        guard let claims = decodeJWTPayload(jwt) else { return nil }
+
+        if let id = claims["chatgpt_account_id"] as? String { return id }
+
+        if let authClaims = claims["https://api.openai.com/auth"] as? [String: Any],
+           let id = authClaims["chatgpt_account_id"] as? String { return id }
+
+        if let orgs = claims["organizations"] as? [[String: Any]],
+           let id = orgs.first?["id"] as? String { return id }
+
+        return nil
     }
 
     // MARK: - Token refresh
@@ -283,11 +317,15 @@ actor OAuthService {
             throw OAuthError.tokenExchangeFailed("No access_token in refresh response")
         }
 
+        let idToken = json["id_token"] as? String
+        let accountId = idToken.flatMap(Self.extractAccountId) ?? Self.extractAccountId(from: accessToken)
+
         return Tokens(
             accessToken: accessToken,
             refreshToken: json["refresh_token"] as? String ?? refreshToken,
-            idToken: json["id_token"] as? String,
-            expiresIn: json["expires_in"] as? Int
+            idToken: idToken,
+            expiresIn: json["expires_in"] as? Int,
+            accountId: accountId
         )
     }
 

@@ -58,19 +58,37 @@ struct HeaderView: View {
     private var authSection: some View {
         if appState.isAuthenticated {
             Menu {
+                Text(authMethodLabel)
+                    .font(.caption)
+                Divider()
                 Button("Sign out") {
                     authManager.logout()
                     appState.authMode = .none
                 }
             } label: {
-                Label("Connected", systemImage: "checkmark.circle.fill")
+                Label(authBadgeLabel, systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
             }
         } else {
             Button("Sign in") {
-                // Handled by SetupView; this is just a visual indicator
+                appState.setPhase(.setup)
             }
-            .disabled(true)
+        }
+    }
+
+    private var authBadgeLabel: String {
+        switch appState.authMode {
+        case .oauth: return "ChatGPT"
+        case .apiKey: return "API Key"
+        case .none: return "Connected"
+        }
+    }
+
+    private var authMethodLabel: String {
+        switch appState.authMode {
+        case .oauth: return "Signed in with ChatGPT"
+        case .apiKey: return "Using API key"
+        case .none: return ""
         }
     }
 }

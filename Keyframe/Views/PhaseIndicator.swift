@@ -41,7 +41,7 @@ struct PhaseIndicator: View {
     }
 
     private func foregroundColor(for phase: Phase) -> Color {
-        if isActive(phase) { return .white }
+        if isActive(phase) { return Color(.windowBackgroundColor) }
         if isPast(phase) { return .primary }
         return .secondary
     }

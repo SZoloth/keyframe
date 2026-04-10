@@ -28,6 +28,7 @@ enum CodexDetector {
     struct DetectedTokens {
         let accessToken: String
         let refreshToken: String?
+        let accountId: String?
     }
 
     static func detect(at path: String? = nil) -> DetectedTokens? {
@@ -51,7 +52,8 @@ enum CodexDetector {
 
         return DetectedTokens(
             accessToken: accessToken,
-            refreshToken: tokens.refreshToken
+            refreshToken: tokens.refreshToken,
+            accountId: tokens.accountId
         )
     }
 

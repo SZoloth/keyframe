@@ -9,6 +9,7 @@ struct StyleView: View {
     @State private var generating = false
     @State private var analyzing = false
     @State private var errorMessage: String?
+    @State private var styleDescriptionDraft = ""
 
     enum StyleMode: String, CaseIterable {
         case upload = "Upload"
@@ -79,9 +80,16 @@ struct StyleView: View {
                     }
 
                     if let errorMessage {
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundStyle(.red)
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                        .padding(10)
+                        .background(.red.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
 
                     if !appState.project.style.description.isEmpty {
@@ -157,8 +165,11 @@ struct StyleView: View {
                 Button {
                     runStyleAnalysis()
                 } label: {
-                    Text(analyzing ? "Analyzing..." : "Analyze style")
-                        .frame(maxWidth: .infinity)
+                    HStack(spacing: 6) {
+                        if analyzing { ProgressView().controlSize(.small) }
+                        Text(analyzing ? "Analyzing style..." : "Analyze style")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .controlSize(.regular)
                 .buttonStyle(.borderedProminent)
@@ -187,8 +198,11 @@ struct StyleView: View {
             Button {
                 runStyleGeneration()
             } label: {
-                Text(generating ? "Generating..." : "Generate reference")
-                    .frame(maxWidth: .infinity)
+                HStack(spacing: 6) {
+                    if generating { ProgressView().controlSize(.small) }
+                    Text(generating ? "Generating reference..." : "Generate reference")
+                }
+                .frame(maxWidth: .infinity)
             }
             .controlSize(.regular)
             .buttonStyle(.borderedProminent)
@@ -206,21 +220,33 @@ struct StyleView: View {
                 .fontWeight(.medium)
                 .foregroundStyle(.secondary)
 
-            @Bindable var state = appState
-            TextEditor(text: Binding(
-                get: { state.project.style.description },
-                set: { state.setStyleDescription($0) }
-            ))
-            .font(.caption)
-            .frame(minHeight: 100, maxHeight: 160)
-            .scrollContentBackground(.hidden)
-            .padding(8)
-            .background(.quaternary.opacity(0.3))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            TextEditor(text: $styleDescriptionDraft)
+                .font(.caption)
+                .frame(minHeight: 100, maxHeight: 160)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(.quaternary.opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .onAppear { styleDescriptionDraft = appState.project.style.description }
+                .onChange(of: appState.project.style.description) { _, newValue in
+                    if styleDescriptionDraft != newValue {
+                        styleDescriptionDraft = newValue
+                    }
+                }
+                .onDisappear {
+                    commitStyleDescription()
+                }
 
             Text("Edit if needed. This will be used for all generated frames.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
+        }
+    }
+
+    private func commitStyleDescription() {
+        let trimmed = styleDescriptionDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed != appState.project.style.description {
+            appState.setStyleDescription(trimmed)
         }
     }
 
@@ -230,6 +256,7 @@ struct StyleView: View {
         VStack {
             Divider()
             Button {
+                commitStyleDescription()
                 appState.lockStyle()
             } label: {
                 Text("Lock style & continue")
@@ -244,7 +271,8 @@ struct StyleView: View {
     }
 
     private var canLock: Bool {
-        !appState.project.style.referenceImages.isEmpty && !appState.project.style.description.isEmpty
+        !appState.project.style.referenceImages.isEmpty &&
+        (!appState.project.style.description.isEmpty || !styleDescriptionDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
     // MARK: - API calls

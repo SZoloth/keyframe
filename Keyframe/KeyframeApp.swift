@@ -1,7 +1,6 @@
 import SwiftUI
 
 @main
-@MainActor
 struct KeyframeApp: App {
     @State private var appState = AppState()
     @State private var authManager = AuthManager()
@@ -13,11 +12,19 @@ struct KeyframeApp: App {
                 .environment(appState)
                 .environment(authManager)
                 .environment(aiProvider)
+                .task {
+                    let restored = authManager.resolveAuthMode()
+                    if restored != .none {
+                        appState.authMode = restored
+                    }
+                    aiProvider.configure(authMode: appState.authMode)
+                }
                 .onChange(of: appState.authMode) { _, newMode in
                     aiProvider.configure(authMode: newMode)
                 }
         }
         .defaultSize(width: 1200, height: 800)
+        .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .undoRedo) {
                 Button("Undo") { appState.undo() }
@@ -53,6 +60,18 @@ struct KeyframeApp: App {
                     ProjectFileManager.save(state: appState)
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
+
+                Divider()
+
+                Button("Export PDF...") {
+                    let templateName = appState.selectedTemplate?.name ?? "Freeform"
+                    PDFExporter.export(
+                        frames: appState.project.frames,
+                        config: PDFExporter.Config(projectName: "Storyboard", templateName: templateName)
+                    )
+                }
+                .keyboardShortcut("e", modifiers: .command)
+                .disabled(appState.project.frames.filter { $0.status == .complete }.isEmpty)
             }
         }
     }

@@ -12,9 +12,7 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if appState.project.currentPhase == .setup {
-                SetupView()
-            } else if appState.project.currentPhase == .export {
+            if appState.project.currentPhase == .export {
                 ExportSidebarView()
             } else {
                 tabBar
@@ -23,6 +21,18 @@ struct SidebarView: View {
         }
         .frame(minWidth: 320, idealWidth: 360, maxWidth: 400)
         .background(.background)
+        .onChange(of: appState.project.currentPhase, initial: true) { _, newPhase in
+            syncTab(to: newPhase)
+        }
+    }
+
+    private func syncTab(to phase: Phase) {
+        switch phase {
+        case .style: activeTab = .style
+        case .cast: activeTab = .cast
+        case .frames, .export: activeTab = .chat
+        case .setup: break
+        }
     }
 
     private var tabBar: some View {

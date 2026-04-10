@@ -62,6 +62,7 @@ struct AuthTests {
         #expect(tokens != nil)
         #expect(tokens?.accessToken == "eyJhbGciOiJSUzI1...")
         #expect(tokens?.refreshToken == "rt_BaFnCHAUVz...")
+        #expect(tokens?.accountId == "fdd387ac-a196-4eba-...")
     }
 
     @Test func codexDetectorRejectsStaleTokens() throws {
@@ -137,7 +138,8 @@ struct AuthTests {
         let manager = AuthManager()
         let tokens = CodexDetector.DetectedTokens(
             accessToken: "imported-access-token",
-            refreshToken: "imported-refresh-token"
+            refreshToken: "imported-refresh-token",
+            accountId: "acc-imported"
         )
         manager.loginWithCodexTokens(tokens)
         #expect(manager.status == .authenticated)
@@ -145,11 +147,13 @@ struct AuthTests {
         let oauth = manager.storedOAuthTokens()
         #expect(oauth?.accessToken == "imported-access-token")
         #expect(oauth?.refreshToken == "imported-refresh-token")
+        #expect(oauth?.accountId == "acc-imported")
 
         let mode = manager.resolveAuthMode()
-        if case .oauth(let access, let refresh) = mode {
+        if case .oauth(let access, let refresh, let accountId) = mode {
             #expect(access == "imported-access-token")
             #expect(refresh == "imported-refresh-token")
+            #expect(accountId == "acc-imported")
         } else {
             Issue.record("Expected .oauth mode")
         }

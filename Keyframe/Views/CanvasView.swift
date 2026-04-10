@@ -9,15 +9,17 @@ struct CanvasView: View {
     }
 
     var body: some View {
-        Group {
+        ZStack(alignment: .topLeading) {
+            Color(.windowBackgroundColor)
+                .ignoresSafeArea()
+
             if appState.project.frames.isEmpty {
                 emptyState
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 frameGrid
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.windowBackgroundColor))
     }
 
     private var emptyState: some View {
@@ -29,10 +31,10 @@ struct CanvasView: View {
     }
 
     private var frameGrid: some View {
-        ScrollView {
+        ScrollView(.vertical) {
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 200, maximum: 280), spacing: 16)],
-                spacing: 16
+                columns: [GridItem(.adaptive(minimum: 240, maximum: 320), spacing: 20)],
+                spacing: 20
             ) {
                 ForEach(appState.project.frames) { frame in
                     FrameCard(frame: frame, isSelected: frame.id == appState.selectedFrameId)
@@ -65,8 +67,9 @@ struct CanvasView: View {
                     addFrameButton
                 }
             }
-            .padding(24)
+            .padding(20)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var addFrameButton: some View {
@@ -82,7 +85,7 @@ struct CanvasView: View {
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 160)
+            .frame(height: 200)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [6]))
@@ -132,12 +135,12 @@ struct FrameCard: View {
             Image(nsImage: nsImage)
                 .resizable()
                 .aspectRatio(1, contentMode: .fill)
-                .frame(height: 160)
+                .frame(height: 200)
                 .clipped()
         } else {
             Rectangle()
                 .fill(.quaternary)
-                .frame(height: 160)
+                .frame(height: 200)
                 .overlay {
                     VStack(spacing: 4) {
                         Image(systemName: statusIcon)

@@ -51,7 +51,6 @@ enum PDFExporter {
 
     private static func drawTitlePage(context: CGContext, config: Config, frameCount: Int) {
         let size = config.pageSize
-        var mediaBox = CGRect(origin: .zero, size: size)
         context.beginPDFPage(nil)
 
         let titleFont = NSFont.systemFont(ofSize: 32, weight: .bold)
@@ -151,8 +150,6 @@ enum PDFExporter {
         ]
 
         let attrString = NSAttributedString(string: text, attributes: attributes)
-        let flippedRect = CGRect(x: rect.origin.x, y: pageHeight - rect.origin.y - rect.height,
-                                  width: rect.width, height: rect.height)
 
         context.saveGState()
         context.translateBy(x: 0, y: pageHeight)
