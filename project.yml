@@ -1,0 +1,45 @@
+name: Keyframe
+options:
+  bundleIdPrefix: com.szoloth
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "26.4"
+  minimumXcodeGenVersion: "2.40"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+targets:
+  Keyframe:
+    type: application
+    platform: macOS
+    sources:
+      - path: Keyframe
+        excludes:
+          - Resources/Keyframe.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.szoloth.keyframe
+        PRODUCT_NAME: Keyframe
+        INFOPLIST_KEY_CFBundleDisplayName: Keyframe
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.graphics-design
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+        CODE_SIGN_ENTITLEMENTS: Keyframe/Resources/Keyframe.entitlements
+        ENABLE_PREVIEWS: YES
+    entitlements:
+      path: Keyframe/Resources/Keyframe.entitlements
+
+  KeyframeTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: KeyframeTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.szoloth.keyframe.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Keyframe
