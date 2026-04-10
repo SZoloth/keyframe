@@ -1,7 +1,7 @@
 ---
 title: "fix: Address code review findings from integration wiring"
 type: fix
-status: active
+status: completed
 date: 2026-04-10
 origin: docs/plans/2026-04-10-002-feat-integration-wiring-plan.md
 ---
