@@ -5,7 +5,7 @@ import AppKit
 
 actor OAuthService {
     struct Config {
-        var clientId = "DRivsnm2Mu42T3KOpqdtwB3NYkHRMBsjrealClientId"
+        var clientId = "app_EMoamEEZ73f0CkXaXp7hrann"
         var issuerBaseURL = "https://auth.openai.com"
         var redirectPort: UInt16 = 1455
         var scopes = "openid profile email offline_access"
