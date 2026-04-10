@@ -23,13 +23,15 @@ Auth → Template → Style (upload/describe + lock) → Cast → Frame Generati
 `AppState` (`@MainActor @Observable`) holds all project state with snapshot-based undo/redo (50-level history). Injected into SwiftUI views via `@Environment`.
 
 ### Authentication
-Three paths, all yielding a bearer token for `api.openai.com/v1`:
-- **Sign in with ChatGPT** — OAuth PKCE via `auth.openai.com`, localhost:1455 callback (`OAuthService`)
-- **API key** — direct entry, stored in macOS Keychain (`KeychainService`)
-- **Codex token import** — reads `~/.codex/auth.json` if present (`CodexDetector`)
+Three paths with dual API routing:
+- **Sign in with ChatGPT** — OAuth PKCE via `auth.openai.com`, localhost:1455 callback (`OAuthService`) → routes to Codex Backend API (`chatgpt.com/backend-api/codex/responses`), bills against ChatGPT subscription
+- **API key** — direct entry, stored in macOS Keychain (`KeychainService`) → routes to Platform API (`api.openai.com/v1`)
+- **Codex token import** — reads `~/.codex/auth.json` if present (`CodexDetector`) → routes to Codex Backend API
+
+See `docs/solutions/best-practices/chatgpt-subscription-via-codex-backend-api-2026-04-10.md` for the dual routing pattern.
 
 ### AI services
-`OpenAIService` (actor) handles chat completions (gpt-4o) and image generation (gpt-image-1). Wrapped by `AIServiceProvider` (`@Observable`) for SwiftUI environment injection. Images use `response_format: "b64_json"` — see `docs/solutions/` for why.
+`OpenAIService` (actor) handles chat completions, vision, and image generation. API-key users hit the Chat Completions API; OAuth users hit the Responses API via the Codex Backend. Wrapped by `AIServiceProvider` (`@Observable`) for SwiftUI environment injection. Images use `response_format: "b64_json"` for Platform API — see `docs/solutions/` for why.
 
 ### File persistence
 Custom `.keyframe` JSON format via `Codable`. Native `NSSavePanel`/`NSOpenPanel` for file dialogs. `UTType` registered for the custom file type.
@@ -77,7 +79,7 @@ project.yml                     # XcodeGen project definition
 
 ## Testing
 
-Swift Testing framework (`@Test`, `#expect`, `@Suite`). 50 tests covering state mutations, undo/redo, auth flows, project serialization, and frame operations. Run with `xcodebuild test`.
+Swift Testing framework (`@Test`, `#expect`, `@Suite`). 118 tests across 12 suites covering state mutations, undo/redo, auth flows, Responses API parsing, project serialization, frame operations, and screen-by-screen flow tests. Run with `xcodebuild test`.
 
 ## Important notes
 
