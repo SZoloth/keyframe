@@ -51,7 +51,7 @@ struct ExportFlowTests {
 
         // Setup: authenticate and select template
         #expect(state.project.currentPhase == .setup)
-        state.authMode = .apiKey("sk-walk")
+        state.authMode = .oauth(accessToken: "tok-walk", refreshToken: nil, accountId: "acc-walk")
         state.selectTemplate("problem-solution")
         #expect(state.canAdvanceToPhase(.style) == true)
         state.setPhase(.style)
@@ -113,7 +113,7 @@ struct ExportFlowTests {
 
     @Test func phaseGatingBlocksBackwardSkip() {
         let state = AppState()
-        state.authMode = .apiKey("sk-test")
+        state.authMode = .oauth(accessToken: "tok-test", refreshToken: nil, accountId: "acc-test")
         state.selectTemplate("problem-solution")
         state.setPhase(.style)
         state.addReferenceImage(Data([1]))

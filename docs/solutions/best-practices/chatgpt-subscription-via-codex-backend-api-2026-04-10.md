@@ -36,11 +36,13 @@ The "Sign in with ChatGPT" OAuth flow (via `auth.openai.com`) grants identity-sc
 
 Apps like [Open Interpreter](https://github.com/openinterpreter/open-interpreter) and the Codex CLI use the Codex Backend API to let users run AI features against their ChatGPT subscription without needing a separate API key.
 
+For Keyframe's current stabilization phase, the product boundary is narrower than the underlying service layer: the supported app experience is ChatGPT/Codex-only. Platform API routing may still exist as an internal compatibility seam, but it is not a supported setup path in the app UI.
+
 ## Guidance
 
-### Dual routing architecture
+### Routing architecture
 
-Route API calls to different endpoints based on how the user authenticated:
+At the service layer, route API calls to different endpoints based on the credential type you actually have:
 
 ```swift
 enum Endpoint {
@@ -49,15 +51,18 @@ enum Endpoint {
 }
 ```
 
-- **API key users** → route to `api.openai.com/v1` (Chat Completions API format)
-- **OAuth users** → route to `chatgpt.com/backend-api/codex/responses` (Responses API format)
+- **Platform API credentials** → route to `api.openai.com/v1` (Chat Completions / Images API formats)
+- **ChatGPT OAuth credentials** → route to `chatgpt.com/backend-api/codex/responses` (Responses API format)
+
+For Keyframe, only the second branch is part of the current supported product contract.
 
 ### Codex Backend API requirements
 
-The Codex Backend endpoint uses the **Responses API** format, not Chat Completions. Two critical constraints discovered through production failures:
+The Codex Backend endpoint uses the **Responses API** format, not Chat Completions. Three critical constraints discovered through production failures:
 
 1. **`stream` must be `true`** — the Codex Backend rejects `stream: false` with a 400 error: *"Stream must be set to true"*. This means you must implement Server-Sent Events (SSE) parsing for every call.
 2. **Model selection differs from Platform API** — the Codex Backend does not support `gpt-4o`. Use `gpt-5.4-mini` (or `gpt-5.4`, `gpt-5.3-codex`, `gpt-5.2`). Sending `gpt-4o` returns a 400 error: *"The 'gpt-4o' model is not supported when using Codex with a ChatGPT account."*
+3. **Image generation requests are stricter than the public Responses examples** — for Keyframe's style reference flow, the backend rejected missing `instructions` and rejected string `input` with *`{"detail":"Input must be a list"}`*. Use a list-form `input` with a user message item.
 
 ```swift
 // Headers
@@ -130,6 +135,15 @@ The Responses API uses a flat `image_url` string for vision input (different fro
 ["type": "image_url", "image_url": ["url": "data:image/png;base64,<b64>"]]
 ```
 
+### Source of truth when docs disagree
+
+When there is a mismatch between public Responses docs and the ChatGPT Codex backend, use this order:
+
+1. Observed Keyframe runtime behavior against `chatgpt.com/backend-api/codex/responses`
+2. Official Codex auth docs
+3. Official public Responses and image-generation docs
+4. Third-party apps and repos
+
 ### SSE response parsing (required)
 
 Since `stream: true` is mandatory, every Codex Backend response arrives as a Server-Sent Events stream. The stream contains multiple event types; the two that carry final results:
@@ -181,7 +195,7 @@ static func parseSSEResponse(lines: [String]) throws -> Data {
 
 ## Why This Matters
 
-Without dual routing, OAuth users hit 401 errors on every API call because `auth.openai.com` tokens lack Platform API scopes. The user experience is: "I signed in with my ChatGPT account, but nothing works."
+Without correct routing, OAuth users hit 401 errors on every API call because `auth.openai.com` tokens lack Platform API scopes. The user experience is: "I signed in with my ChatGPT account, but nothing works."
 
 The Codex Backend API is the same endpoint that OpenAI's own Codex CLI and IDE extensions use. It's undocumented publicly but stable — used by the official Codex product and third-party apps like Open Interpreter.
 
@@ -190,9 +204,9 @@ Using this pattern means ChatGPT subscribers can use your app immediately withou
 ## When to Apply
 
 - Your app offers "Sign in with ChatGPT" as an authentication option
-- You want feature parity between API-key and OAuth users (text, vision, image generation)
-- You need to support image generation via ChatGPT subscription (the `image_generation` tool type)
+- You need to support text, vision, or image generation via ChatGPT subscription
 - The user has a ChatGPT Plus, Pro, or Team subscription
+- You need a documented fallback when the service layer still retains non-ChatGPT credential paths internally
 
 ## Examples
 
@@ -201,8 +215,8 @@ Using this pattern means ChatGPT subscribers can use your app immediately withou
 ```swift
 func configure(authMode: AuthMode) {
     switch authMode {
-    case .apiKey(let key):
-        apiKey = key
+    case .none:
+        endpoint = nil
     case .oauth(let accessToken, _, _):
         apiKey = accessToken  // Fails: OAuth tokens are not API keys
     }
@@ -210,13 +224,13 @@ func configure(authMode: AuthMode) {
 // All calls go to api.openai.com/v1 → 401 for OAuth users
 ```
 
-### After: dual routing by auth type
+### After: app boundary stays ChatGPT-only, service layer still routes correctly
 
 ```swift
 func configure(authMode: AuthMode) {
     switch authMode {
-    case .apiKey(let key):
-        endpoint = .platform(apiKey: key)
+    case .none:
+        endpoint = nil
     case .oauth(let accessToken, _, let accountId):
         if let accountId, !accountId.isEmpty {
             endpoint = .codexBackend(accessToken: accessToken, accountId: accountId)
@@ -225,6 +239,10 @@ func configure(authMode: AuthMode) {
             oauthMissingAccountId = true
         }
     }
+}
+
+func configure(endpoint: Endpoint) {
+    self.endpoint = endpoint
 }
 
 private func textCompletion(system: String, user: String, model: String) async throws -> String {
@@ -241,6 +259,7 @@ private func textCompletion(system: String, user: String, model: String) async t
 ## Related
 
 - `docs/solutions/integration-issues/codex-backend-streaming-and-model-errors-2026-04-10.md` — bug track doc covering the specific failures that led to these corrections
+- `docs/solutions/best-practices/keyframe-chatgpt-codex-contract-2026-04-10.md` — source-of-truth hierarchy and backend-vs-public-doc differences for Keyframe
 - `docs/solutions/integration-issues/openai-image-url-expiration-2026-04-10.md` — related OpenAI API integration pattern (b64_json for persistence)
 - [Open Interpreter](https://github.com/openinterpreter/open-interpreter) — reference implementation using this pattern
 - [OpenAI Responses API docs](https://platform.openai.com/docs/api-reference/responses/create) — official API reference for the payload format

@@ -9,9 +9,6 @@ struct EditableBeat: Identifiable {
 struct SetupView: View {
     @Environment(AppState.self) private var appState
     @Environment(AuthManager.self) private var authManager
-    @State private var apiKeyInput = ""
-    @State private var showAPIKeyField = false
-    @State private var showAPIKeyHelp = false
     @State private var codexDetected = false
     @State private var showCustomTemplateForm = false
     @State private var customName = ""
@@ -113,16 +110,6 @@ struct SetupView: View {
                 }
                 .controlSize(.large)
                 .buttonStyle(.bordered)
-
-                if showAPIKeyField {
-                    apiKeyField
-                } else {
-                    Button("Use API key instead") {
-                        showAPIKeyField = true
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
             }
 
             if case .failed(let msg) = authManager.status {
@@ -155,65 +142,6 @@ struct SetupView: View {
             .font(.caption)
             .foregroundStyle(.secondary)
         }
-    }
-
-    private var apiKeyField: some View {
-        VStack(spacing: 8) {
-            SecureField("sk-...", text: $apiKeyInput)
-                .textFieldStyle(.roundedBorder)
-
-            HStack {
-                Button("Connect") {
-                    authManager.loginWithAPIKey(apiKeyInput)
-                    appState.authMode = authManager.resolveAuthMode()
-                    apiKeyInput = ""
-                    showAPIKeyField = false
-                }
-                .disabled(apiKeyInput.isEmpty)
-                .buttonStyle(.borderedProminent)
-                .tint(.primary)
-
-                Button("Cancel") {
-                    showAPIKeyField = false
-                    apiKeyInput = ""
-                }
-            }
-            .controlSize(.small)
-
-            HStack(spacing: 4) {
-                Text("Stored in macOS Keychain only.")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-
-                Spacer()
-
-                Button {
-                    showAPIKeyHelp.toggle()
-                } label: {
-                    Label("How to get a key", systemImage: "questionmark.circle")
-                        .font(.caption2)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-            }
-
-            if showAPIKeyHelp {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("1. Go to platform.openai.com/api-keys")
-                    Text("2. Click \"Create new secret key\"")
-                    Text("3. Copy and paste it above")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.quaternary.opacity(0.5))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
-        }
-        .padding(12)
-        .background(.quaternary.opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
     // MARK: - Templates

@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Native macOS storyboard generator. Users authenticate with OpenAI, pick a narrative template, define a visual style, build a cast of characters, then generate consistent illustrated frames via GPT-4o and gpt-image-1. Export to PDF.
+Native macOS storyboard generator. In the current stabilization phase, users authenticate with ChatGPT/Codex, pick a narrative template, define a visual style, build a cast of characters, then generate consistent illustrated frames and export to PDF.
 
 ## Build and test
 
@@ -23,15 +23,16 @@ Auth → Template → Style (upload/describe + lock) → Cast → Frame Generati
 `AppState` (`@MainActor @Observable`) holds all project state with snapshot-based undo/redo (50-level history). Injected into SwiftUI views via `@Environment`.
 
 ### Authentication
-Three paths with dual API routing:
+Current product contract:
 - **Sign in with ChatGPT** — OAuth PKCE via `auth.openai.com`, localhost:1455 callback (`OAuthService`) → routes to Codex Backend API (`chatgpt.com/backend-api/codex/responses`), bills against ChatGPT subscription
-- **API key** — direct entry, stored in macOS Keychain (`KeychainService`) → routes to Platform API (`api.openai.com/v1`)
 - **Codex token import** — reads `~/.codex/auth.json` if present (`CodexDetector`) → routes to Codex Backend API
 
-See `docs/solutions/best-practices/chatgpt-subscription-via-codex-backend-api-2026-04-10.md` for the dual routing pattern.
+The app no longer offers API-key auth in setup or app state during this phase. `OpenAIService` still retains a Platform endpoint as a lower-level compatibility seam, but it is not part of the supported UI contract.
+
+See `docs/solutions/best-practices/chatgpt-subscription-via-codex-backend-api-2026-04-10.md` and `docs/solutions/best-practices/keyframe-chatgpt-codex-contract-2026-04-10.md` for the current contract and evidence hierarchy.
 
 ### AI services
-`OpenAIService` (actor) handles chat completions, vision, and image generation. API-key users hit the Chat Completions API; OAuth users hit the Responses API via the Codex Backend. Wrapped by `AIServiceProvider` (`@Observable`) for SwiftUI environment injection. Images use `response_format: "b64_json"` for Platform API — see `docs/solutions/` for why.
+`OpenAIService` (actor) handles chat completions, vision, and image generation. The supported app path uses the Responses API via the Codex Backend. Wrapped by `AIServiceProvider` (`@Observable`) for SwiftUI environment injection. Platform API helpers remain in the service layer, but they are not part of the current product auth contract.
 
 ### File persistence
 Custom `.keyframe` JSON format via `Codable`. Native `NSSavePanel`/`NSOpenPanel` for file dialogs. `UTType` registered for the custom file type.
@@ -54,7 +55,7 @@ Keyframe/
     PDFExporter.swift           # PDF generation via PDFKit
     ProjectFileManager.swift    # .keyframe file save/load
   Views/                        # SwiftUI views (Setup, Style, Cast, Canvas, Chat, etc.)
-KeyframeTests/                  # 160 tests across 14 suites
+KeyframeTests/                  # Swift Testing suites, including fixture-backed Codex contract coverage
 docs/
   plans/                        # Implementation plans with YAML frontmatter
   solutions/                    # Documented solutions and learnings (YAML frontmatter, searchable by module/tags/problem_type)
@@ -79,7 +80,7 @@ project.yml                     # XcodeGen project definition
 
 ## Testing
 
-Swift Testing framework (`@Test`, `#expect`, `@Suite`). 160 tests across 14 suites covering state mutations, undo/redo, auth flows, endpoint routing, Responses API parsing, SSE stream parsing, project serialization, frame operations, phase gating, and end-to-end flow tests (both Platform API and Codex Backend paths). Run with `xcodebuild test`.
+Swift Testing framework (`@Test`, `#expect`, `@Suite`). Coverage centers on state mutations, undo/redo, ChatGPT/Codex auth flows, endpoint routing, Responses API parsing, SSE parsing, project serialization, frame operations, phase gating, and fixture-backed first-run Codex flow tests. Run with `xcodebuild test`.
 
 ## Important notes
 

@@ -20,9 +20,9 @@ struct OpenAIServiceTests {
         await service.configure(authMode: .none)
     }
 
-    @Test func configureFromAuthModeAPIKey() async {
+    @Test func configureFromPlatformEndpoint() async {
         let service = OpenAIService()
-        await service.configure(authMode: .apiKey("sk-live-key"))
+        await service.configure(endpoint: .platform(apiKey: "sk-live-key"))
     }
 
     @Test func configureFromAuthModeOAuth() async {
@@ -82,9 +82,9 @@ struct OpenAIServiceTests {
 
     // MARK: - Endpoint routing by auth mode
 
-    @Test func apiKeyRoutesToPlatformEndpoint() async {
+    @Test func platformEndpointConfigRoutesToPlatformEndpoint() async {
         let service = OpenAIService()
-        await service.configure(authMode: .apiKey("sk-test-key"))
+        await service.configure(endpoint: .platform(apiKey: "sk-test-key"))
         let ep = await service.endpoint
         guard case .platform(let key) = ep else {
             Issue.record("Expected platform endpoint"); return
@@ -126,7 +126,7 @@ struct OpenAIServiceTests {
         await service.configure(authMode: .oauth(accessToken: "tok", refreshToken: nil, accountId: nil))
         #expect(await service.oauthMissingAccountId == true)
 
-        await service.configure(authMode: .apiKey("sk-test"))
+        await service.configure(endpoint: .platform(apiKey: "sk-test"))
         #expect(await service.oauthMissingAccountId == false)
         #expect(await service.endpoint?.isPlatform == true)
     }
@@ -140,6 +140,81 @@ struct OpenAIServiceTests {
 
     @Test func platformDefaultModelIsGpt4o() {
         #expect(OpenAIService.platformDefaultModel == "gpt-4o")
+    }
+
+    @Test func codexTextBodyMatchesBackendRequirements() throws {
+        let system = "You are a storyboard scene director."
+        let user = "Describe a rainy alley."
+        let body = OpenAIService.buildCodexTextBody(
+            system: system,
+            user: user,
+            model: OpenAIService.codexDefaultModel
+        )
+
+        #expect(body["model"] as? String == OpenAIService.codexDefaultModel)
+        #expect(body["instructions"] as? String == system)
+        #expect(body["store"] as? Bool == false)
+        #expect(body["stream"] as? Bool == true)
+
+        let input = body["input"] as? [[String: Any]]
+        #expect(input?.count == 1)
+        #expect(input?.first?["role"] as? String == "user")
+
+        let content = input?.first?["content"] as? [[String: Any]]
+        #expect(content?.count == 1)
+        #expect(content?.first?["type"] as? String == "input_text")
+        #expect(content?.first?["text"] as? String == user)
+    }
+
+    @Test func codexVisionBodyMatchesBackendRequirements() throws {
+        let imageData = Data([0x89, 0x50, 0x4E, 0x47])
+        let body = OpenAIService.buildCodexVisionBody(
+            userText: "Analyze this style",
+            images: [imageData],
+            model: OpenAIService.codexDefaultModel
+        )
+
+        #expect(body["model"] as? String == OpenAIService.codexDefaultModel)
+        #expect(body["instructions"] as? String == "You are a visual style analyst.")
+        #expect(body["store"] as? Bool == false)
+        #expect(body["stream"] as? Bool == true)
+
+        let input = body["input"] as? [[String: Any]]
+        #expect(input?.count == 1)
+        #expect(input?.first?["role"] as? String == "user")
+
+        let content = input?.first?["content"] as? [[String: Any]]
+        #expect(content?.count == 2)
+        #expect(content?.first?["type"] as? String == "input_text")
+        #expect(content?.first?["text"] as? String == "Analyze this style")
+        #expect(content?.last?["type"] as? String == "input_image")
+        #expect(content?.last?["image_url"] as? String == "data:image/png;base64,\(imageData.base64EncodedString())")
+    }
+
+    @Test func codexImageGenerationBodyMatchesBackendRequirements() throws {
+        let body = OpenAIService.buildCodexImageGenerationBody(
+            prompt: "anime",
+            model: OpenAIService.codexDefaultModel
+        )
+
+        #expect(body["model"] as? String == OpenAIService.codexDefaultModel)
+        #expect(body["instructions"] as? String == "Generate the requested image.")
+        #expect(body["store"] as? Bool == false)
+        #expect(body["stream"] as? Bool == true)
+
+        let input = body["input"] as? [[String: Any]]
+        #expect(input?.count == 1)
+        #expect(input?.first?["role"] as? String == "user")
+
+        let content = input?.first?["content"] as? [[String: Any]]
+        #expect(content?.count == 1)
+        #expect(content?.first?["type"] as? String == "input_text")
+        #expect(content?.first?["text"] as? String == "Draw anime")
+
+        let tools = body["tools"] as? [[String: Any]]
+        #expect(tools?.count == 1)
+        #expect(tools?.first?["type"] as? String == "image_generation")
+        #expect(body["tool_choice"] == nil)
     }
 
     // MARK: - Responses API parsing
@@ -244,27 +319,35 @@ struct OpenAIServiceTests {
 @Suite("SSE response parsing", .serialized)
 struct SSEParsingTests {
 
+    // Helper: wrap a response object in the real API event format.
+    // The live Codex Backend sends response.completed as:
+    //   {"type":"response.completed","response":{...},"sequence_number":N}
+    // The parser must unwrap this to return just the inner response object.
+    private static func wrapCompleted(_ responseJSON: String, seq: Int = 1) -> String {
+        return "{\"type\":\"response.completed\",\"response\":\(responseJSON),\"sequence_number\":\(seq)}"
+    }
+
     // --- Text completion ---
 
     @Test func textCompletionSSEParsesResponseCompleted() async throws {
-        let completedJSON = """
+        let responseJSON = """
         {"id":"resp_abc","object":"response","status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"A bustling kitchen scene."}]}],"output_text":"A bustling kitchen scene."}
         """
         let lines = [
             "event: response.created",
-            "data: {\"id\":\"resp_abc\",\"status\":\"in_progress\"}",
+            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_abc\",\"status\":\"in_progress\"}}",
             "",
             "event: response.output_item.added",
-            "data: {\"type\":\"message\",\"content\":[]}",
+            "data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"message\",\"content\":[]}}",
             "",
             "event: response.output_text.delta",
-            "data: {\"delta\":\"A bustling \"}",
+            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"A bustling \"}",
             "",
             "event: response.output_text.delta",
-            "data: {\"delta\":\"kitchen scene.\"}",
+            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"kitchen scene.\"}",
             "",
             "event: response.completed",
-            "data: \(completedJSON)",
+            "data: \(Self.wrapCompleted(responseJSON, seq: 5))",
             "",
         ]
 
@@ -280,21 +363,21 @@ struct SSEParsingTests {
         let testImageData = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A])
         let b64 = testImageData.base64EncodedString()
 
-        let completedJSON = """
+        let responseJSON = """
         {"id":"resp_img","object":"response","status":"completed","output":[{"type":"image_generation_call","status":"completed","result":"\(b64)"}]}
         """
         let lines = [
             "event: response.created",
-            "data: {\"id\":\"resp_img\",\"status\":\"in_progress\"}",
+            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_img\",\"status\":\"in_progress\"}}",
             "",
             "event: response.output_item.added",
-            "data: {\"type\":\"image_generation_call\",\"status\":\"in_progress\"}",
+            "data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"image_generation_call\",\"status\":\"in_progress\"}}",
             "",
             "event: response.output_item.done",
-            "data: {\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}",
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}}",
             "",
             "event: response.completed",
-            "data: \(completedJSON)",
+            "data: \(Self.wrapCompleted(responseJSON, seq: 3))",
             "",
         ]
 
@@ -310,13 +393,13 @@ struct SSEParsingTests {
 
         let lines = [
             "event: response.created",
-            "data: {\"id\":\"resp_img2\",\"status\":\"in_progress\"}",
+            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_img2\",\"status\":\"in_progress\"}}",
             "",
             "event: response.output_item.added",
-            "data: {\"type\":\"image_generation_call\",\"status\":\"in_progress\"}",
+            "data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"image_generation_call\",\"status\":\"in_progress\"}}",
             "",
             "event: response.output_item.done",
-            "data: {\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}",
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}}",
             "",
         ]
 
@@ -338,10 +421,10 @@ struct SSEParsingTests {
     @Test func sseWithOnlyDeltasAndNoCompletedThrows() {
         let lines = [
             "event: response.created",
-            "data: {\"id\":\"resp_x\"}",
+            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_x\"}}",
             "",
             "event: response.output_text.delta",
-            "data: {\"delta\":\"partial\"}",
+            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"partial\"}",
             "",
         ]
         #expect(throws: OpenAIService.ServiceError.self) {
@@ -350,12 +433,12 @@ struct SSEParsingTests {
     }
 
     @Test func sseOutputTextFallbackWorksEndToEnd() async throws {
-        let completedJSON = """
+        let responseJSON = """
         {"id":"resp_ot","object":"response","status":"completed","output":[],"output_text":"Style: bold ink lines with flat color."}
         """
         let lines = [
             "event: response.completed",
-            "data: \(completedJSON)",
+            "data: \(Self.wrapCompleted(responseJSON))",
         ]
 
         let data = try OpenAIService.parseSSEResponse(lines: lines)
@@ -365,19 +448,18 @@ struct SSEParsingTests {
     }
 
     @Test func imageGenerationViaOutputItemDoneOnlyExtractsImage() async throws {
-        // Realistic scenario: Codex backend sends output_item.done with flat structure, no response.completed
         let testImageData = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
         let b64 = testImageData.base64EncodedString()
 
         let lines = [
             "event: response.created",
-            "data: {\"id\":\"resp_ig\",\"object\":\"response\",\"status\":\"in_progress\"}",
+            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_ig\",\"object\":\"response\",\"status\":\"in_progress\"}}",
             "",
             "event: response.output_item.added",
-            "data: {\"output_index\":0,\"item\":{\"id\":\"ig_abc\",\"type\":\"image_generation_call\",\"status\":\"in_progress\"}}",
+            "data: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"id\":\"ig_abc\",\"type\":\"image_generation_call\",\"status\":\"in_progress\"}}",
             "",
             "event: response.output_item.done",
-            "data: {\"output_index\":0,\"item\":{\"id\":\"ig_abc\",\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}}",
+            "data: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"id\":\"ig_abc\",\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}}",
             "",
         ]
 
@@ -393,7 +475,7 @@ struct SSEParsingTests {
 
         let lines = [
             "event: response.output_item.done",
-            "data: {\"output_index\":0,\"item\":{\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}}",
+            "data: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}}",
             "",
         ]
 
@@ -407,9 +489,10 @@ struct SSEParsingTests {
         let largeImageData = Data(repeating: 0xAB, count: 200_000)
         let b64 = largeImageData.base64EncodedString()
 
+        let responseJSON = "{\"id\":\"resp_lg\",\"object\":\"response\",\"status\":\"completed\",\"output\":[{\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}]}"
         let lines = [
             "event: response.completed",
-            "data: {\"id\":\"resp_lg\",\"output\":[{\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}]}",
+            "data: \(Self.wrapCompleted(responseJSON, seq: 99))",
             "",
         ]
 
@@ -422,10 +505,10 @@ struct SSEParsingTests {
     @Test func sseWithMultipleOutputItemDoneKeepsLast() throws {
         let lines = [
             "event: response.output_item.done",
-            "data: {\"output_index\":0,\"item\":{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"first\"}]}}",
+            "data: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"first\"}]}}",
             "",
             "event: response.output_item.done",
-            "data: {\"output_index\":1,\"item\":{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"second\"}]}}",
+            "data: {\"type\":\"response.output_item.done\",\"output_index\":1,\"item\":{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"second\"}]}}",
             "",
         ]
 
@@ -436,12 +519,13 @@ struct SSEParsingTests {
     }
 
     @Test func sseCompletedEventTakesPriorityOverOutputItemDone() async throws {
+        let responseJSON = "{\"id\":\"resp_c\",\"object\":\"response\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"final answer\"}]}]}"
         let lines = [
             "event: response.output_item.done",
-            "data: {\"output_index\":0,\"item\":{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"stale\"}]}}",
+            "data: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"stale\"}]}}",
             "",
             "event: response.completed",
-            "data: {\"id\":\"resp_c\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"final answer\"}]}]}",
+            "data: \(Self.wrapCompleted(responseJSON, seq: 7))",
             "",
         ]
 
@@ -449,6 +533,109 @@ struct SSEParsingTests {
         let service = OpenAIService()
         let text = try await service.extractTextFromResponsesAPI(data: data)
         #expect(text == "final answer")
+    }
+
+    // --- Realistic full SSE stream (matches captured Codex Backend response) ---
+
+    @Test func realisticCodexBackendTextStream() async throws {
+        let lines = [
+            "event: response.created",
+            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_03a6\",\"object\":\"response\",\"created_at\":1775853744,\"status\":\"in_progress\",\"background\":false,\"output\":[]}}",
+            "",
+            "event: response.in_progress",
+            "data: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"resp_03a6\",\"object\":\"response\",\"created_at\":1775853744,\"status\":\"in_progress\"}}",
+            "",
+            "event: response.output_item.added",
+            "data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"msg_abc\",\"type\":\"message\",\"status\":\"in_progress\",\"content\":[],\"role\":\"assistant\"},\"output_index\":0}",
+            "",
+            "event: response.content_part.added",
+            "data: {\"type\":\"response.content_part.added\",\"content_index\":0,\"item_id\":\"msg_abc\",\"output_index\":0,\"part\":{\"type\":\"output_text\",\"annotations\":[],\"text\":\"\"}}",
+            "",
+            "event: response.output_text.delta",
+            "data: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\"Bold\",\"item_id\":\"msg_abc\",\"output_index\":0}",
+            "",
+            "event: response.output_text.delta",
+            "data: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\" ink\",\"item_id\":\"msg_abc\",\"output_index\":0}",
+            "",
+            "event: response.output_text.delta",
+            "data: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\" style.\",\"item_id\":\"msg_abc\",\"output_index\":0}",
+            "",
+            "event: response.output_text.done",
+            "data: {\"type\":\"response.output_text.done\",\"content_index\":0,\"item_id\":\"msg_abc\",\"output_index\":0,\"text\":\"Bold ink style.\"}",
+            "",
+            "event: response.content_part.done",
+            "data: {\"type\":\"response.content_part.done\",\"content_index\":0,\"item_id\":\"msg_abc\",\"output_index\":0,\"part\":{\"type\":\"output_text\",\"annotations\":[],\"text\":\"Bold ink style.\"}}",
+            "",
+            "event: response.output_item.done",
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"msg_abc\",\"type\":\"message\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"annotations\":[],\"text\":\"Bold ink style.\"}],\"role\":\"assistant\"},\"output_index\":0}",
+            "",
+            "event: response.completed",
+            "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_03a6\",\"object\":\"response\",\"created_at\":1775853744,\"status\":\"completed\",\"output\":[{\"id\":\"msg_abc\",\"type\":\"message\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"annotations\":[],\"text\":\"Bold ink style.\"}],\"role\":\"assistant\"}]},\"sequence_number\":290}",
+            "",
+        ]
+
+        let data = try OpenAIService.parseSSEResponse(lines: lines)
+        let service = OpenAIService()
+        let text = try await service.extractTextFromResponsesAPI(data: data)
+        #expect(text == "Bold ink style.")
+    }
+
+    @Test func realisticCodexBackendImageStream() async throws {
+        let testImageData = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00])
+        let b64 = testImageData.base64EncodedString()
+
+        let lines = [
+            "event: response.created",
+            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_img7\",\"object\":\"response\",\"created_at\":1775854000,\"status\":\"in_progress\",\"output\":[]}}",
+            "",
+            "event: response.in_progress",
+            "data: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"resp_img7\",\"status\":\"in_progress\"}}",
+            "",
+            "event: response.output_item.added",
+            "data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"ig_xyz\",\"type\":\"image_generation_call\",\"status\":\"in_progress\"},\"output_index\":0}",
+            "",
+            "event: response.output_item.done",
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"ig_xyz\",\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\",\"revised_prompt\":\"A watercolor landscape with rolling hills\"},\"output_index\":0}",
+            "",
+            "event: response.completed",
+            "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_img7\",\"object\":\"response\",\"created_at\":1775854000,\"status\":\"completed\",\"output\":[{\"id\":\"ig_xyz\",\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\",\"revised_prompt\":\"A watercolor landscape with rolling hills\"}]},\"sequence_number\":5}",
+            "",
+        ]
+
+        let data = try OpenAIService.parseSSEResponse(lines: lines)
+        let service = OpenAIService()
+        let imageData = try await service.extractImageFromResponsesAPI(data: data)
+        #expect(imageData == testImageData)
+    }
+
+    @Test func realisticModelDeclinesImageGeneration() async throws {
+        let lines = [
+            "event: response.created",
+            "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_decline\",\"object\":\"response\",\"status\":\"in_progress\",\"output\":[]}}",
+            "",
+            "event: response.output_item.added",
+            "data: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"msg_d\",\"type\":\"message\",\"status\":\"in_progress\",\"content\":[]},\"output_index\":0}",
+            "",
+            "event: response.output_text.delta",
+            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"I can help but I can't generate that image.\",\"item_id\":\"msg_d\",\"output_index\":0}",
+            "",
+            "event: response.output_item.done",
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"msg_d\",\"type\":\"message\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"I can help but I can't generate that image.\"}]},\"output_index\":0}",
+            "",
+            "event: response.completed",
+            "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_decline\",\"object\":\"response\",\"status\":\"completed\",\"output\":[{\"id\":\"msg_d\",\"type\":\"message\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"I can help but I can't generate that image.\"}]}]},\"sequence_number\":50}",
+            "",
+        ]
+
+        let data = try OpenAIService.parseSSEResponse(lines: lines)
+        let service = OpenAIService()
+
+        do {
+            _ = try await service.extractImageFromResponsesAPI(data: data)
+            Issue.record("Should have thrown — model returned text, not an image")
+        } catch let error as OpenAIService.ServiceError {
+            #expect(error == .imageGenerationFailed("No image data in response output"))
+        }
     }
 }
 
@@ -502,22 +689,22 @@ struct CodexEndToEndTests {
             state.setPhase(.frames)
         }
 
-        // Simulate SSE response for scene suggestion
+        // Simulate SSE response for scene suggestion (real API format)
         let sceneSuggestionSSE = [
             "event: response.completed",
-            "data: {\"id\":\"resp_scene\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"A dark alley illuminated by neon signs.\"}]}]}",
+            "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_scene\",\"object\":\"response\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"A dark alley illuminated by neon signs.\"}]}]},\"sequence_number\":12}",
             "",
         ]
         let sceneData = try OpenAIService.parseSSEResponse(lines: sceneSuggestionSSE)
         let sceneText = try await service.extractTextFromResponsesAPI(data: sceneData)
         #expect(sceneText == "A dark alley illuminated by neon signs.")
 
-        // Simulate SSE response for image generation
+        // Simulate SSE response for image generation (real API format)
         let fakeImageData = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A])
         let b64 = fakeImageData.base64EncodedString()
         let imageSSE = [
-            "event: response.output_item.done",
-            "data: {\"output_index\":0,\"item\":{\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}}",
+            "event: response.completed",
+            "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_img_e2e\",\"object\":\"response\",\"status\":\"completed\",\"output\":[{\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(b64)\"}]},\"sequence_number\":5}",
             "",
         ]
         let imgSSEData = try OpenAIService.parseSSEResponse(lines: imageSSE)
@@ -538,63 +725,6 @@ struct CodexEndToEndTests {
         #expect(finalPhase == .export)
     }
 
-    @Test func fullPhaseWalkthroughWithPlatformAPI() async throws {
-        let state = await AppState()
-
-        // Setup: API key auth
-        await MainActor.run {
-            state.authMode = .apiKey("sk-test-platform")
-        }
-        let isAuth = await state.isAuthenticated
-        #expect(isAuth == true)
-
-        // Verify routing goes to platform
-        let service = OpenAIService()
-        await service.configure(authMode: await state.authMode)
-        let ep = await service.endpoint
-        guard case .platform(let key) = ep else {
-            Issue.record("Expected platform endpoint"); return
-        }
-        #expect(key == "sk-test-platform")
-        #expect(OpenAIService.platformDefaultModel == "gpt-4o")
-
-        // Style: lock with image + description
-        await MainActor.run {
-            state.setPhase(.style)
-            state.addReferenceImage(Data([1, 2, 3]))
-            state.setStyleDescription("Pencil sketch with watercolor wash")
-            state.lockStyle()
-        }
-        let phase1 = await state.project.currentPhase
-        #expect(phase1 == .cast)
-
-        // Cast: add character with full details
-        await MainActor.run {
-            state.addCharacter(StoryboardCharacter(name: "Max", role: "Protagonist", visualDescription: "Tall with glasses", referenceImageData: Data([4, 5])))
-        }
-        let canFrames = await state.canAdvanceToPhase(.frames)
-        #expect(canFrames == true)
-
-        // Select template and advance to frames
-        await MainActor.run {
-            state.selectTemplate("raskin-pitch")
-            state.setPhase(.frames)
-        }
-        let frameCount = await state.project.frames.count
-        #expect(frameCount == 5)
-
-        // Mark a frame complete
-        let frameId = await state.project.frames[0].id
-        await MainActor.run {
-            state.updateFrame(frameId, sceneDescription: "Boardroom scene", imageData: Data([6, 7, 8]), status: .complete)
-        }
-        let canExport = await state.canAdvanceToPhase(.export)
-        #expect(canExport == true)
-
-        await MainActor.run { state.setPhase(.export) }
-        let finalPhase = await state.project.currentPhase
-        #expect(finalPhase == .export)
-    }
 }
 
 extension OpenAIService.ServiceError: @retroactive Equatable {

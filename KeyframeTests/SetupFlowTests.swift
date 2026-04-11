@@ -15,7 +15,7 @@ struct SetupFlowTests {
 
     @Test func setPhaseToSetupAlwaysSucceeds() {
         let state = AppState()
-        state.authMode = .apiKey("sk-test")
+        state.authMode = .oauth(accessToken: "tok", refreshToken: nil, accountId: "acc-1")
         state.setPhase(.style)
         #expect(state.project.currentPhase == .style)
 
@@ -27,21 +27,22 @@ struct SetupFlowTests {
         let state = AppState()
         #expect(state.canAdvanceToPhase(.setup) == true)
 
-        state.authMode = .apiKey("sk-test")
+        state.authMode = .oauth(accessToken: "tok", refreshToken: nil, accountId: "acc-1")
         state.setPhase(.style)
         #expect(state.canAdvanceToPhase(.setup) == true)
-    }
-
-    @Test func isAuthenticatedWithAPIKey() {
-        let state = AppState()
-        state.authMode = .apiKey("sk-test")
-        #expect(state.isAuthenticated == true)
     }
 
     @Test func isAuthenticatedWithOAuth() {
         let state = AppState()
         state.authMode = .oauth(accessToken: "token", refreshToken: nil, accountId: "acc-123")
         #expect(state.isAuthenticated == true)
+    }
+
+    @Test func oauthWithoutAccountIdIsNotAuthenticated() {
+        let state = AppState()
+        state.authMode = .oauth(accessToken: "token", refreshToken: nil, accountId: nil)
+        #expect(state.isAuthenticated == false)
+        #expect(state.canAdvanceToPhase(.style) == false)
     }
 
     @Test func isNotAuthenticatedWithNone() {
@@ -124,12 +125,6 @@ struct SetupFlowTests {
         #expect(state.canAdvanceToPhase(.style) == false)
     }
 
-    @Test func apiKeyAuthEnablesStyleAdvancement() {
-        let state = AppState()
-        state.authMode = .apiKey("sk-test")
-        #expect(state.canAdvanceToPhase(.style) == true)
-    }
-
     @Test func oauthAuthEnablesStyleAdvancement() {
         let state = AppState()
         state.authMode = .oauth(accessToken: "token", refreshToken: nil, accountId: "acc-123")
@@ -140,7 +135,7 @@ struct SetupFlowTests {
         let state = AppState()
         #expect(state.project.currentPhase == .setup)
 
-        state.authMode = .apiKey("sk-proceed")
+        state.authMode = .oauth(accessToken: "tok-proceed", refreshToken: nil, accountId: "acc-proceed")
         #expect(state.canAdvanceToPhase(.style) == true)
 
         state.setPhase(.style)

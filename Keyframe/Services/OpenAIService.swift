@@ -35,6 +35,7 @@ actor OpenAIService {
     private(set) var endpoint: Endpoint?
 
     func configure(endpoint: Endpoint) {
+        oauthMissingAccountId = false
         self.endpoint = endpoint
     }
 
@@ -45,8 +46,6 @@ actor OpenAIService {
         switch authMode {
         case .none:
             endpoint = nil
-        case .apiKey(let key):
-            endpoint = .platform(apiKey: key)
         case .oauth(let accessToken, _, let accountId):
             if let accountId, !accountId.isEmpty {
                 endpoint = .codexBackend(accessToken: accessToken, accountId: accountId)
@@ -370,15 +369,7 @@ actor OpenAIService {
     private func codexTextCompletion(
         system: String, user: String, model: String, accessToken: String, accountId: String
     ) async throws -> String {
-        let body: [String: Any] = [
-            "model": model,
-            "instructions": system,
-            "store": false,
-            "stream": true,
-            "input": [
-                ["role": "user", "content": [["type": "input_text", "text": user]]]
-            ],
-        ]
+        let body = Self.buildCodexTextBody(system: system, user: user, model: model)
 
         let data = try await postStreaming(
             url: Self.codexResponsesURL,
@@ -392,26 +383,11 @@ actor OpenAIService {
     private func codexVisionCompletion(
         userText: String, images: [Data], model: String, accessToken: String, accountId: String
     ) async throws -> String {
-        var contentArray: [[String: Any]] = [
-            ["type": "input_text", "text": userText]
-        ]
-        for imageData in images {
-            let b64 = imageData.base64EncodedString()
-            contentArray.append([
-                "type": "input_image",
-                "image_url": "data:image/png;base64,\(b64)"
-            ])
-        }
-
-        let body: [String: Any] = [
-            "model": model,
-            "instructions": "You are a visual style analyst.",
-            "store": false,
-            "stream": true,
-            "input": [
-                ["role": "user", "content": contentArray]
-            ],
-        ]
+        let body = Self.buildCodexVisionBody(
+            userText: userText,
+            images: images,
+            model: model
+        )
 
         let data = try await postStreaming(
             url: Self.codexResponsesURL,
@@ -422,21 +398,70 @@ actor OpenAIService {
         return try extractTextFromResponsesAPI(data: data)
     }
 
-    private func codexImageGeneration(
-        prompt: String, model: String, accessToken: String, accountId: String
-    ) async throws -> Data {
-        let body: [String: Any] = [
+    static func buildCodexTextBody(system: String, user: String, model: String) -> [String: Any] {
+        [
             "model": model,
-            "instructions": "Generate the requested image.",
+            "instructions": system,
+            "store": false,
+            "stream": true,
+            "input": codexInputList(text: user),
+        ]
+    }
+
+    static func buildCodexVisionBody(userText: String, images: [Data], model: String) -> [String: Any] {
+        var contentArray: [[String: Any]] = [
+            ["type": "input_text", "text": userText]
+        ]
+
+        for imageData in images {
+            let b64 = imageData.base64EncodedString()
+            contentArray.append([
+                "type": "input_image",
+                "image_url": "data:image/png;base64,\(b64)"
+            ])
+        }
+
+        return [
+            "model": model,
+            "instructions": "You are a visual style analyst.",
             "store": false,
             "stream": true,
             "input": [
-                ["role": "user", "content": [["type": "input_text", "text": prompt]]]
-            ],
-            "tools": [
-                ["type": "image_generation", "quality": "medium", "size": "1024x1024"]
+                ["role": "user", "content": contentArray]
             ],
         ]
+    }
+
+    static func buildCodexImageGenerationBody(prompt: String, model: String) -> [String: Any] {
+        [
+            "model": model,
+            // The ChatGPT Codex backend requires instructions even though the
+            // public Responses docs show a slimmer image-generation example.
+            "instructions": "Generate the requested image.",
+            "store": false,
+            "stream": true,
+            "input": codexInputList(text: "Draw \(prompt)"),
+            "tools": [
+                ["type": "image_generation"]
+            ],
+        ]
+    }
+
+    private static func codexInputList(text: String) -> [[String: Any]] {
+        [
+            [
+                "role": "user",
+                "content": [
+                    ["type": "input_text", "text": text]
+                ]
+            ]
+        ]
+    }
+
+    private func codexImageGeneration(
+        prompt: String, model: String, accessToken: String, accountId: String
+    ) async throws -> Data {
+        let body = Self.buildCodexImageGenerationBody(prompt: prompt, model: model)
 
         let data = try await postStreaming(
             url: Self.codexResponsesURL,
@@ -475,9 +500,11 @@ actor OpenAIService {
     }
 
     func extractImageFromResponsesAPI(data: Data) throws -> Data {
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let output = json["output"] as? [[String: Any]]
-        else {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw ServiceError.imageGenerationFailed("No output in response")
+        }
+
+        guard let output = json["output"] as? [[String: Any]] else {
             throw ServiceError.imageGenerationFailed("No output in response")
         }
 
@@ -500,7 +527,7 @@ actor OpenAIService {
 
         if let httpResponse = response as? HTTPURLResponse,
            !(200...299).contains(httpResponse.statusCode) {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            let errorBody = Self.extractErrorBody(data)
             throw ServiceError.httpError(httpResponse.statusCode, errorBody)
         }
 
@@ -518,7 +545,7 @@ actor OpenAIService {
            !(200...299).contains(httpResponse.statusCode) {
             var errorChunks = Data()
             for try await byte in bytes { errorChunks.append(byte) }
-            let errorBody = String(data: errorChunks, encoding: .utf8) ?? "Unknown error"
+            let errorBody = Self.extractErrorBody(errorChunks)
             throw ServiceError.httpError(httpResponse.statusCode, errorBody)
         }
 
@@ -556,6 +583,13 @@ actor OpenAIService {
         }
 
         if let finalData = completedData {
+            // response.completed wraps the response under a "response" key;
+            // unwrap it so callers can access "output" at the top level.
+            if let parsed = try? JSONSerialization.jsonObject(with: finalData) as? [String: Any],
+               let inner = parsed["response"] as? [String: Any],
+               let unwrapped = try? JSONSerialization.data(withJSONObject: inner) {
+                return unwrapped
+            }
             return finalData
         }
 
@@ -569,6 +603,22 @@ actor OpenAIService {
         }
 
         throw ServiceError.noContent
+    }
+
+    static func extractErrorBody(_ data: Data) -> String {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let detail = json["detail"] as? String, !detail.isEmpty {
+                return detail
+            }
+            if let error = json["error"] as? [String: Any],
+               let message = error["message"] as? String,
+               !message.isEmpty {
+                return message
+            }
+        }
+
+        let raw = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return raw?.isEmpty == false ? raw! : "Unknown error"
     }
 
     private func buildRequest(url: String, body: [String: Any], headers: [String: String]) throws -> URLRequest {

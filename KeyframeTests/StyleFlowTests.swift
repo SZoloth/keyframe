@@ -97,7 +97,7 @@ struct StyleFlowTests {
 
     @Test func lockStyleWithDescriptionOnlyNoImages() {
         let state = AppState()
-        state.authMode = .apiKey("sk-test")
+        state.authMode = .oauth(accessToken: "tok-test", refreshToken: nil, accountId: "acc-test")
         state.setPhase(.style)
 
         state.setStyleDescription("Bold ink lines with flat color fills")
@@ -130,7 +130,7 @@ struct StyleFlowTests {
 
     @Test func fullStyleFlowFromImageToLock() {
         let state = AppState()
-        state.authMode = .apiKey("sk-test")
+        state.authMode = .oauth(accessToken: "tok-test", refreshToken: nil, accountId: "acc-test")
         state.setPhase(.style)
 
         state.addReferenceImage(Data([0x89, 0x50]))

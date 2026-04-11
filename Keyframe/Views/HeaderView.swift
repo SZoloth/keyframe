@@ -79,7 +79,6 @@ struct HeaderView: View {
     private var authBadgeLabel: String {
         switch appState.authMode {
         case .oauth: return "ChatGPT"
-        case .apiKey: return "API Key"
         case .none: return "Connected"
         }
     }
@@ -87,7 +86,6 @@ struct HeaderView: View {
     private var authMethodLabel: String {
         switch appState.authMode {
         case .oauth: return "Signed in with ChatGPT"
-        case .apiKey: return "Using API key"
         case .none: return ""
         }
     }

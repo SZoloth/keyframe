@@ -83,7 +83,7 @@ struct AppStateTests {
         #expect(state.canAdvanceToPhase(.setup) == true)
         #expect(state.canAdvanceToPhase(.style) == false)
 
-        state.authMode = .apiKey("sk-test")
+        state.authMode = .oauth(accessToken: "tok-test", refreshToken: nil, accountId: "acc-test")
         #expect(state.canAdvanceToPhase(.style) == true)
         #expect(state.canAdvanceToPhase(.cast) == false)
 

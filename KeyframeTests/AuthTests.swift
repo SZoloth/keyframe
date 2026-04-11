@@ -5,41 +5,6 @@ import Foundation
 @Suite("Auth services", .serialized)
 struct AuthTests {
 
-    // MARK: - Keychain
-
-    @Test func keychainSaveAndLoad() throws {
-        try KeychainService.save(.apiKey, value: "sk-test-12345")
-        let loaded = KeychainService.load(.apiKey)
-        #expect(loaded == "sk-test-12345")
-        KeychainService.delete(.apiKey)
-    }
-
-    @Test func keychainOverwrite() throws {
-        try KeychainService.save(.apiKey, value: "first")
-        try KeychainService.save(.apiKey, value: "second")
-        #expect(KeychainService.load(.apiKey) == "second")
-        KeychainService.delete(.apiKey)
-    }
-
-    @Test func keychainDeleteRemovesValue() throws {
-        try KeychainService.save(.apiKey, value: "to-delete")
-        KeychainService.delete(.apiKey)
-        #expect(KeychainService.load(.apiKey) == nil)
-    }
-
-    @Test func keychainLoadMissingReturnsNil() {
-        KeychainService.delete(.oauthAccountId)
-        #expect(KeychainService.load(.oauthAccountId) == nil)
-    }
-
-    @Test func keychainDeleteAll() throws {
-        try KeychainService.save(.apiKey, value: "key")
-        try KeychainService.save(.oauthAccessToken, value: "token")
-        KeychainService.deleteAll()
-        #expect(KeychainService.load(.apiKey) == nil)
-        #expect(KeychainService.load(.oauthAccessToken) == nil)
-    }
-
     // MARK: - CodexDetector
 
     @Test func codexDetectorParsesValidAuth() throws {
@@ -105,37 +70,9 @@ struct AuthTests {
 
     // MARK: - AuthManager
 
-    @MainActor @Test func authManagerAPIKeyFlow() {
-        let manager = AuthManager()
-        manager.loginWithAPIKey("sk-test-key-123")
-        #expect(manager.status == .authenticated)
-        #expect(manager.storedAPIKey() == "sk-test-key-123")
-
-        let mode = manager.resolveAuthMode()
-        if case .apiKey(let key) = mode {
-            #expect(key == "sk-test-key-123")
-        } else {
-            Issue.record("Expected .apiKey mode")
-        }
-
-        manager.logout()
-        #expect(manager.status == .idle)
-        #expect(manager.storedAPIKey() == nil)
-        #expect(manager.resolveAuthMode() == .none)
-    }
-
-    @MainActor @Test func authManagerRejectsEmptyAPIKey() {
-        let manager = AuthManager()
-        manager.loginWithAPIKey("")
-        if case .failed = manager.status {
-            // expected
-        } else {
-            Issue.record("Expected .failed status for empty key")
-        }
-    }
-
     @MainActor @Test func authManagerCodexTokenImport() {
         let manager = AuthManager()
+        manager.logout()
         let tokens = CodexDetector.DetectedTokens(
             accessToken: "imported-access-token",
             refreshToken: "imported-refresh-token",
@@ -161,22 +98,40 @@ struct AuthTests {
         manager.logout()
     }
 
-    // MARK: - Auth mode to endpoint routing
-
-    @MainActor @Test func apiKeyAuthModeRoutesPlatform() {
+    @MainActor @Test func authManagerIgnoresLegacyAPIKeyDuringResolution() throws {
         let manager = AuthManager()
-        manager.loginWithAPIKey("sk-route-test")
-        let mode = manager.resolveAuthMode()
-        if case .apiKey(let key) = mode {
-            #expect(key == "sk-route-test")
-        } else {
-            Issue.record("Expected .apiKey mode")
-        }
         manager.logout()
+        try KeychainService.save(.apiKey, value: "sk-legacy")
+
+        let mode = manager.resolveAuthMode()
+        #expect(mode == .none)
+        #expect(KeychainService.load(.apiKey) == nil)
     }
+
+    @Test func persistedOAuthValuesPreserveExistingAccountIdWhenRefreshOmitsIt() {
+        let refreshed = OAuthService.Tokens(
+            accessToken: "new-access-token",
+            refreshToken: "new-refresh-token",
+            idToken: nil,
+            expiresIn: 3600,
+            accountId: nil
+        )
+
+        let values = AuthManager.persistedOAuthValues(
+            from: refreshed,
+            fallbackAccountId: "acc-existing"
+        )
+
+        #expect(values[.oauthAccessToken] == "new-access-token")
+        #expect(values[.oauthRefreshToken] == "new-refresh-token")
+        #expect(values[.oauthAccountId] == "acc-existing")
+    }
+
+    // MARK: - Auth mode to endpoint routing
 
     @MainActor @Test func oauthAuthModeRoutesCodexBackend() {
         let manager = AuthManager()
+        manager.logout()
         let tokens = CodexDetector.DetectedTokens(
             accessToken: "tok-route",
             refreshToken: "rt-route",
@@ -195,13 +150,17 @@ struct AuthTests {
 
     @MainActor @Test func logoutClearsAllCredentials() {
         let manager = AuthManager()
-        manager.loginWithAPIKey("sk-clear-test")
+        manager.loginWithCodexTokens(.init(
+            accessToken: "tok-clear-test",
+            refreshToken: "rt-clear-test",
+            accountId: "acc-clear-test"
+        ))
         #expect(manager.status == .authenticated)
 
         manager.logout()
         #expect(manager.resolveAuthMode() == .none)
-        #expect(manager.storedAPIKey() == nil)
         #expect(manager.storedOAuthTokens() == nil)
+        #expect(KeychainService.load(.apiKey) == nil)
     }
 
     // MARK: - PKCE helpers

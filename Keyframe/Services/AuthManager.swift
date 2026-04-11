@@ -13,23 +13,15 @@ final class AuthManager {
     var status: Status = .idle
     private let oauthService = OAuthService()
 
-    // MARK: - API key auth
-
-    func loginWithAPIKey(_ key: String) {
-        guard !key.isEmpty else {
-            status = .failed("API key cannot be empty")
-            return
-        }
-        do {
-            try KeychainService.save(.apiKey, value: key)
-            status = .authenticated
-        } catch {
-            status = .failed(error.localizedDescription)
-        }
-    }
-
-    func storedAPIKey() -> String? {
-        KeychainService.load(.apiKey)
+    nonisolated static func persistedOAuthValues(
+        from tokens: OAuthService.Tokens,
+        fallbackAccountId: String? = nil
+    ) -> [KeychainService.Key: String?] {
+        [
+            .oauthAccessToken: tokens.accessToken,
+            .oauthRefreshToken: tokens.refreshToken,
+            .oauthAccountId: tokens.accountId ?? fallbackAccountId,
+        ]
     }
 
     // MARK: - OAuth (ChatGPT / Codex)
@@ -38,13 +30,8 @@ final class AuthManager {
         status = .authenticating
         do {
             let tokens = try await oauthService.startAuthorization()
-            try KeychainService.save(.oauthAccessToken, value: tokens.accessToken)
-            if let refresh = tokens.refreshToken {
-                try KeychainService.save(.oauthRefreshToken, value: refresh)
-            }
-            if let accountId = tokens.accountId {
-                try KeychainService.save(.oauthAccountId, value: accountId)
-            }
+            clearLegacyAPIKey()
+            try KeychainService.save(Self.persistedOAuthValues(from: tokens))
             status = .authenticated
         } catch is CancellationError {
             status = .idle
@@ -69,13 +56,12 @@ final class AuthManager {
         guard let refreshToken = KeychainService.load(.oauthRefreshToken) else { return false }
         do {
             let tokens = try await oauthService.refreshAccessToken(refreshToken: refreshToken)
-            try KeychainService.save(.oauthAccessToken, value: tokens.accessToken)
-            if let newRefresh = tokens.refreshToken {
-                try KeychainService.save(.oauthRefreshToken, value: newRefresh)
-            }
-            if let accountId = tokens.accountId {
-                try KeychainService.save(.oauthAccountId, value: accountId)
-            }
+            try KeychainService.save(
+                Self.persistedOAuthValues(
+                    from: tokens,
+                    fallbackAccountId: storedOAuthTokens()?.accountId
+                )
+            )
             return true
         } catch {
             return false
@@ -90,13 +76,18 @@ final class AuthManager {
 
     func loginWithCodexTokens(_ tokens: CodexDetector.DetectedTokens) {
         do {
-            try KeychainService.save(.oauthAccessToken, value: tokens.accessToken)
-            if let refresh = tokens.refreshToken {
-                try KeychainService.save(.oauthRefreshToken, value: refresh)
-            }
-            if let accountId = tokens.accountId {
-                try KeychainService.save(.oauthAccountId, value: accountId)
-            }
+            clearLegacyAPIKey()
+            try KeychainService.save(
+                Self.persistedOAuthValues(
+                    from: .init(
+                        accessToken: tokens.accessToken,
+                        refreshToken: tokens.refreshToken,
+                        idToken: nil,
+                        expiresIn: nil,
+                        accountId: tokens.accountId
+                    )
+                )
+            )
             status = .authenticated
         } catch {
             status = .failed(error.localizedDescription)
@@ -106,11 +97,9 @@ final class AuthManager {
     // MARK: - Resolve current AuthMode for AppState
 
     func resolveAuthMode() -> AuthMode {
+        clearLegacyAPIKey()
         if let oauth = storedOAuthTokens() {
             return .oauth(accessToken: oauth.accessToken, refreshToken: oauth.refreshToken, accountId: oauth.accountId)
-        }
-        if let apiKey = storedAPIKey() {
-            return .apiKey(apiKey)
         }
         return .none
     }
@@ -120,5 +109,9 @@ final class AuthManager {
     func logout() {
         KeychainService.deleteAll()
         status = .idle
+    }
+
+    private func clearLegacyAPIKey() {
+        KeychainService.delete(.apiKey)
     }
 }

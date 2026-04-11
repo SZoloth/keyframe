@@ -3,7 +3,6 @@ import Observation
 
 enum AuthMode: Equatable {
     case none
-    case apiKey(String)
     case oauth(accessToken: String, refreshToken: String?, accountId: String?)
 }
 
@@ -23,7 +22,13 @@ final class AppState {
     var canRedo: Bool { !future.isEmpty }
 
     var isAuthenticated: Bool {
-        authMode != .none
+        switch authMode {
+        case .none:
+            return false
+        case .oauth(_, _, let accountId):
+            guard let accountId else { return false }
+            return !accountId.isEmpty
+        }
     }
 
     // MARK: - Undo infrastructure

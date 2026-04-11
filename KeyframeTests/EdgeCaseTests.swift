@@ -8,7 +8,7 @@ struct EdgeCaseTests {
 
     @Test func resetProjectReturnsToEmpty() {
         let state = AppState()
-        state.authMode = .apiKey("sk-test")
+        state.authMode = .oauth(accessToken: "tok-test", refreshToken: nil, accountId: "acc-test")
         state.selectTemplate("raskin-pitch")
         state.addCharacter(StoryboardCharacter(name: "A", role: "R", visualDescription: "V"))
         state.setPhase(.frames)
@@ -91,7 +91,7 @@ struct EdgeCaseTests {
 
     @Test func cannotAdvanceToCastWithoutLockedStyle() {
         let state = AppState()
-        state.authMode = .apiKey("sk-test")
+        state.authMode = .oauth(accessToken: "tok-test", refreshToken: nil, accountId: "acc-test")
         state.setPhase(.style)
         state.addReferenceImage(Data([1]))
         state.setStyleDescription("Test")
@@ -102,7 +102,7 @@ struct EdgeCaseTests {
 
     @Test func cannotAdvanceToFramesWithoutCharacters() {
         let state = AppState()
-        state.authMode = .apiKey("sk-test")
+        state.authMode = .oauth(accessToken: "tok-test", refreshToken: nil, accountId: "acc-test")
         state.setPhase(.style)
         state.lockStyle()
 
