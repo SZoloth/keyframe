@@ -8,7 +8,7 @@ struct PhaseIndicator: View {
             ForEach(Array(Phase.allCases.enumerated()), id: \.element) { index, phase in
                 if index > 0 {
                     Rectangle()
-                        .fill(isPast(phase) ? Color.primary : Color(.separatorColor))
+                        .fill(isPast(phase) ? Theme.Colors.primary : Theme.Colors.separator)
                         .frame(width: 20, height: 1)
                 }
 
@@ -41,7 +41,7 @@ struct PhaseIndicator: View {
     }
 
     private func foregroundColor(for phase: Phase) -> Color {
-        if isActive(phase) { return Color(.windowBackgroundColor) }
+        if isActive(phase) { return Theme.Colors.background }
         if isPast(phase) { return .primary }
         return .secondary
     }

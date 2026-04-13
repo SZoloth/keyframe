@@ -20,7 +20,7 @@ struct ContentView: View {
             if appState.project.currentPhase == .setup {
                 SetupView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(.windowBackgroundColor))
+                    .background(Theme.Colors.background)
             } else {
                 HSplitView {
                     CanvasView()

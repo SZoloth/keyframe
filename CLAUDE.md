@@ -7,10 +7,38 @@ Native macOS storyboard generator. In the current stabilization phase, users aut
 ## Build and test
 
 ```bash
+./scripts/build.sh               # xcodegen + build in one command
+./scripts/test.sh                # xcodegen + run all tests
+./scripts/build-release.sh       # Release build + DMG for distribution
+```
+
+Raw commands (if scripts aren't available):
+```bash
 xcodegen generate                 # Regenerate Xcode project from project.yml
 xcodebuild build -project Keyframe.xcodeproj -scheme Keyframe -destination 'platform=macOS'
 xcodebuild test  -project Keyframe.xcodeproj -scheme Keyframe -destination 'platform=macOS'
 ```
+
+## Design tokens
+
+Use `Theme.swift` for all design values. Never hardcode colors, spacing, or typography.
+
+```swift
+Text("Title")
+    .font(Theme.Typography.title)
+    .foregroundStyle(Theme.Colors.primary)
+    .padding(Theme.Spacing.md)
+```
+
+macOS system colors: `Theme.Colors.background` (windowBackgroundColor), `Theme.Colors.separator` (separatorColor), `Theme.Colors.tertiaryBackground` (quaternarySystemFill).
+
+## DialKit (live design tuning)
+
+DialKit provides a runtime tuning overlay in debug builds. Tap the FAB to open the drawer, adjust Theme values live. `DesignDials.swift` defines the tunable properties. Compiles out entirely in release builds.
+
+## Feature flags
+
+Use `FeatureFlags.swift` to toggle experimental features without rebuilding.
 
 ## Architecture
 

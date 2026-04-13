@@ -153,7 +153,7 @@ struct CharacterRow: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color(.separatorColor))
+                .strokeBorder(Theme.Colors.separator)
         )
     }
 }

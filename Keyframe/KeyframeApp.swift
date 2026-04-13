@@ -1,5 +1,9 @@
 import SwiftUI
 
+#if DEBUG
+import DialKit
+#endif
+
 @main
 struct KeyframeApp: App {
     @State private var appState = AppState()
@@ -9,6 +13,9 @@ struct KeyframeApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                #if DEBUG
+                .overlay { DialRoot() }
+                #endif
                 .environment(appState)
                 .environment(authManager)
                 .environment(aiProvider)

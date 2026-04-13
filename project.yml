@@ -31,6 +31,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
+    dependencies:
+      - package: DialKit
     entitlements:
       path: Keyframe/Resources/Keyframe.entitlements
     info:
@@ -62,3 +64,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: Keyframe
+
+packages:
+  DialKit:
+    url: https://github.com/mikelikesdesign/dialkit-ios
+    branch: main

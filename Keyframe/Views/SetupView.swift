@@ -196,7 +196,7 @@ struct SetupView: View {
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(
-                        appState.project.selectedTemplateId == id ? Color.primary : Color(.separatorColor),
+                        appState.project.selectedTemplateId == id ? Theme.Colors.primary : Theme.Colors.separator,
                         lineWidth: appState.project.selectedTemplateId == id ? 2 : 1
                     )
             )

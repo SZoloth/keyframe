@@ -10,7 +10,7 @@ struct CanvasView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            Color(.windowBackgroundColor)
+            Theme.Colors.background
                 .ignoresSafeArea()
 
             if appState.project.frames.isEmpty {
@@ -124,7 +124,7 @@ struct FrameCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(isSelected ? Color.accentColor : Color(.separatorColor), lineWidth: isSelected ? 2 : 1)
+                .strokeBorder(isSelected ? Theme.Colors.accent : Theme.Colors.separator, lineWidth: isSelected ? 2 : 1)
         )
         .shadow(color: .black.opacity(isSelected ? 0.1 : 0.04), radius: isSelected ? 4 : 2)
     }

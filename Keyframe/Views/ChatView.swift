@@ -146,7 +146,7 @@ struct ChatView: View {
                 }
             }
             .padding(10)
-            .background(msg.role == .user ? Color.accentColor : Color(.quaternarySystemFill))
+            .background(msg.role == .user ? Theme.Colors.accent : Theme.Colors.tertiaryBackground)
             .foregroundStyle(msg.role == .user ? .white : .primary)
             .clipShape(RoundedRectangle(cornerRadius: 12))
 

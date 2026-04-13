@@ -12,6 +12,8 @@
 		0510D0864FA49BE500A9E158 /* StyleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 916EEDA0FE5412D7A054A57B /* StyleView.swift */; };
 		0A738132EF947FB09B094F98 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2553A56E64901B4087526DC /* KeychainService.swift */; };
 		1449D71D18AE76705D57AB03 /* codex-style-reference-error-input-must-be-list.json in Resources */ = {isa = PBXBuildFile; fileRef = D1B105F23B314A0B42DDB2FF /* codex-style-reference-error-input-must-be-list.json */; };
+		150E99568AA7978E8B4A2094 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40452EAD80B0F1AE3FF6E26 /* Theme.swift */; };
+		17B4580748B6C39E85CF8272 /* DesignDials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47030022F22916DE06C2B70F /* DesignDials.swift */; };
 		1D152D8D79B8F2504BCFADF0 /* HeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5B8042923F63EEEE03742C7 /* HeaderView.swift */; };
 		2419744A6B1C48522CF6EFE9 /* KeyframeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723C12F97F0A1B771E1506C2 /* KeyframeApp.swift */; };
 		31B4213E4C48D61F2318F682 /* ProjectFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 676F4B26C049837DC52BBD24 /* ProjectFileTests.swift */; };
@@ -35,12 +37,14 @@
 		99EF602F03110FD1F9CDA2CB /* StyleFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8DCC91978D5C7C69D51DA21 /* StyleFlowTests.swift */; };
 		A1AF418CA5CE7617E690F5EF /* PhaseIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A37980FFDE0A319DB20308D3 /* PhaseIndicator.swift */; };
 		A8EB4A9AD3FA40E458D0252B /* codex-style-reference-error-missing-instructions.json in Resources */ = {isa = PBXBuildFile; fileRef = AA193A6B1A90D3F8F429C09D /* codex-style-reference-error-missing-instructions.json */; };
+		AC0487FFE53AF720FDC0701B /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2F566CD4EA2F766F618F5C2 /* FeatureFlags.swift */; };
 		B02B37EE1A50CA69C6E61F31 /* ExportFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 671B56FC263DF595E2E90301 /* ExportFlowTests.swift */; };
 		B0CAC1F3899433D7F5FE3FC1 /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688EF3696F3DB307C6B9467B /* SetupView.swift */; };
 		B60277EAF7C4794DAC15022C /* PDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21ECA15CF276DE3DB74A7860 /* PDFExporter.swift */; };
 		BDFC8B93D50222EDAB5D7F27 /* SetupFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B48AC23E4CA5C285EB9FA6 /* SetupFlowTests.swift */; };
 		C24DB7465ED85249418C9064 /* OpenAIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EF52D5F8EC061B5850013A7 /* OpenAIService.swift */; };
 		C5E96FFA0B9F18E8B718504F /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = D28BA0246AD872D2685EF7BA /* Project.swift */; };
+		CCA8FD6C6A8C4871E1DF9FDB /* DialKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4B6934C17802BBEC29866C9D /* DialKit */; };
 		CCB806308FBCEBEF5433DA60 /* codex-style-reference-success.sse in Resources */ = {isa = PBXBuildFile; fileRef = FB26D3BFBC72AAE7893EA552 /* codex-style-reference-success.sse */; };
 		D7D513259296928EAA474B10 /* Phase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28FE8A1953AE7800C5FC44E6 /* Phase.swift */; };
 		DDB71DB2F20F371282CC6256 /* ProjectFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F7722CBAA855F16848C0841 /* ProjectFileManager.swift */; };
@@ -75,6 +79,7 @@
 		3045593CE49A4B59718556D2 /* CanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasView.swift; sourceTree = "<group>"; };
 		32192D97A0FF418D9F7ED72B /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
 		3545D4C646085CF7DF71F3A3 /* FramesFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FramesFlowTests.swift; sourceTree = "<group>"; };
+		47030022F22916DE06C2B70F /* DesignDials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignDials.swift; sourceTree = "<group>"; };
 		4FB79C7C057DB7D625ECACD2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		50B88C5401C8CA0332A348D7 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		59D2882B450A3DEBC7CA9D70 /* BuiltInTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltInTemplates.swift; sourceTree = "<group>"; };
@@ -93,6 +98,7 @@
 		94BA98A4FDC0BD1D536C6496 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A1B48AC23E4CA5C285EB9FA6 /* SetupFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupFlowTests.swift; sourceTree = "<group>"; };
 		A37980FFDE0A319DB20308D3 /* PhaseIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhaseIndicator.swift; sourceTree = "<group>"; };
+		A40452EAD80B0F1AE3FF6E26 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		AA193A6B1A90D3F8F429C09D /* codex-style-reference-error-missing-instructions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-style-reference-error-missing-instructions.json"; sourceTree = "<group>"; };
 		AFC992329F3AC8E2B6316ACF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B0462F67FE4F0A69B360C65C /* OAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthService.swift; sourceTree = "<group>"; };
@@ -101,6 +107,7 @@
 		BB8AB658DC41A2B81E97DA08 /* AIServiceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIServiceProvider.swift; sourceTree = "<group>"; };
 		BCC5E50FB2AA37A460E29E27 /* CodexBackendFixtureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBackendFixtureTests.swift; sourceTree = "<group>"; };
 		BDAB6329B00575A2C080AEF4 /* UndoRedoFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoRedoFlowTests.swift; sourceTree = "<group>"; };
+		C2F566CD4EA2F766F618F5C2 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
 		C5B8042923F63EEEE03742C7 /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		C743F9923B49F00058CD7BA3 /* Keyframe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Keyframe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C8DCC91978D5C7C69D51DA21 /* StyleFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StyleFlowTests.swift; sourceTree = "<group>"; };
@@ -110,6 +117,17 @@
 		D4F621A26DE765B2E4721A32 /* Template.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Template.swift; sourceTree = "<group>"; };
 		FB26D3BFBC72AAE7893EA552 /* codex-style-reference-success.sse */ = {isa = PBXFileReference; path = "codex-style-reference-success.sse"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6DFAC5C3FE25447EDD791A4B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCA8FD6C6A8C4871E1DF9FDB /* DialKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		08FF4EFB8FA23AF1AEB76F0C /* State */ = {
@@ -224,7 +242,10 @@
 		FB0BCC37096E2D3C61CD9823 /* Keyframe */ = {
 			isa = PBXGroup;
 			children = (
+				47030022F22916DE06C2B70F /* DesignDials.swift */,
+				C2F566CD4EA2F766F618F5C2 /* FeatureFlags.swift */,
 				723C12F97F0A1B771E1506C2 /* KeyframeApp.swift */,
+				A40452EAD80B0F1AE3FF6E26 /* Theme.swift */,
 				82E7152B009E37A1DCE7ADB7 /* Data */,
 				CEBC5341C821F35D60B7D372 /* Models */,
 				22EFF2B768374CE0543723B6 /* Resources */,
@@ -272,6 +293,7 @@
 			buildPhases = (
 				3741094C6BB6728A280D34BF /* Sources */,
 				B9B064E70FBA6B4E030B6B4F /* Resources */,
+				6DFAC5C3FE25447EDD791A4B /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -279,6 +301,7 @@
 			);
 			name = Keyframe;
 			packageProductDependencies = (
+				4B6934C17802BBEC29866C9D /* DialKit */,
 			);
 			productName = Keyframe;
 			productReference = C743F9923B49F00058CD7BA3 /* Keyframe.app */;
@@ -308,6 +331,9 @@
 			);
 			mainGroup = 3B4EE01CF1979ED3DC6FA114;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				18AF634B9C965C41A625FF11 /* XCRemoteSwiftPackageReference "dialkit-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
@@ -354,6 +380,8 @@
 				75FC5BFA7FC24D94B59C2C85 /* ChatView.swift in Sources */,
 				728BC97A48E8A4670B2034DC /* CodexDetector.swift in Sources */,
 				6CE659C7423A6E55D25A6D61 /* ContentView.swift in Sources */,
+				17B4580748B6C39E85CF8272 /* DesignDials.swift in Sources */,
+				AC0487FFE53AF720FDC0701B /* FeatureFlags.swift in Sources */,
 				1D152D8D79B8F2504BCFADF0 /* HeaderView.swift in Sources */,
 				0A738132EF947FB09B094F98 /* KeychainService.swift in Sources */,
 				2419744A6B1C48522CF6EFE9 /* KeyframeApp.swift in Sources */,
@@ -370,6 +398,7 @@
 				0303A1333DD060BF8352DE68 /* StyleDefinition.swift in Sources */,
 				0510D0864FA49BE500A9E158 /* StyleView.swift in Sources */,
 				FBE938C94096F539A4EB9D65 /* Template.swift in Sources */,
+				150E99568AA7978E8B4A2094 /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -632,6 +661,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		18AF634B9C965C41A625FF11 /* XCRemoteSwiftPackageReference "dialkit-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mikelikesdesign/dialkit-ios";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4B6934C17802BBEC29866C9D /* DialKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 18AF634B9C965C41A625FF11 /* XCRemoteSwiftPackageReference "dialkit-ios" */;
+			productName = DialKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E541C2867633E8E800B21A67 /* Project object */;
 }
