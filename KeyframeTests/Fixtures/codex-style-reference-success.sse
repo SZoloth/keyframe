@@ -1,0 +1,15 @@
+event: response.created
+data: {"type":"response.created","response":{"id":"resp_style_ref","object":"response","created_at":1775855000,"status":"in_progress","output":[]}}
+
+event: response.in_progress
+data: {"type":"response.in_progress","response":{"id":"resp_style_ref","object":"response","created_at":1775855000,"status":"in_progress"}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","item":{"id":"ig_style_ref","type":"image_generation_call","status":"in_progress"},"output_index":0}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","item":{"id":"ig_style_ref","type":"image_generation_call","status":"completed","result":"iVBORw0KGgo=","revised_prompt":"Draw anime storyboard style reference"},"output_index":0}
+
+event: response.completed
+data: {"type":"response.completed","response":{"id":"resp_style_ref","object":"response","created_at":1775855000,"status":"completed","output":[{"id":"ig_style_ref","type":"image_generation_call","status":"completed","result":"iVBORw0KGgo=","revised_prompt":"Draw anime storyboard style reference"}]},"sequence_number":9}
+
