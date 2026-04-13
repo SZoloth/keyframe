@@ -42,3 +42,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# xcode user state
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+Keyframe.xcodeproj/project.xcworkspace/xcuserdata/
+Keyframe.xcodeproj/xcuserdata/
+
+# llvm coverage output
+*.profraw
