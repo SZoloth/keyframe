@@ -131,6 +131,35 @@ struct OpenAIServiceTests {
         #expect(await service.endpoint?.isPlatform == true)
     }
 
+    @MainActor @Test func providerPrepareConfiguresCodexEndpointForRequest() async {
+        let provider = AIServiceProvider()
+        await provider.prepare(authMode: .oauth(
+            accessToken: "tok-provider",
+            refreshToken: "rt-provider",
+            accountId: "acc-provider"
+        ))
+
+        let ep = await provider.service.endpoint
+        guard case .codexBackend(let token, let accountId) = ep else {
+            Issue.record("Expected codexBackend endpoint"); return
+        }
+        #expect(token == "tok-provider")
+        #expect(accountId == "acc-provider")
+        #expect(await provider.service.oauthMissingAccountId == false)
+    }
+
+    @MainActor @Test func providerPrepareMarksMissingAccountIdForRequest() async {
+        let provider = AIServiceProvider()
+        await provider.prepare(authMode: .oauth(
+            accessToken: "tok-provider",
+            refreshToken: "rt-provider",
+            accountId: nil
+        ))
+
+        #expect(await provider.service.endpoint == nil)
+        #expect(await provider.service.oauthMissingAccountId == true)
+    }
+
     // MARK: - Model constants
 
     @Test func codexDefaultModelIsNotGpt4o() {
@@ -311,6 +340,155 @@ struct OpenAIServiceTests {
             #expect(error.errorDescription != nil)
             #expect(!error.errorDescription!.isEmpty)
         }
+    }
+}
+
+@Suite("OpenAI transport simulation", .serialized)
+struct OpenAITransportSimulationTests {
+    private static func completedLines(responseJSON: String) -> [String] {
+        [
+            "event: response.completed",
+            "data: {\"type\":\"response.completed\",\"response\":\(responseJSON),\"sequence_number\":1}",
+            ""
+        ]
+    }
+
+    @Test func codexTextCompletionSendsStreamingRequestWithAuthHeaders() async throws {
+        let transport = RecordingOpenAITransport(
+            streamResponses: [
+                .init(
+                    statusCode: 200,
+                    lines: Self.completedLines(
+                        responseJSON: "{\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"A simulated scene.\"}]}]}"
+                    )
+                )
+            ]
+        )
+        let service = OpenAIService(transport: transport)
+        await service.configure(authMode: .oauth(accessToken: "tok-sim", refreshToken: nil, accountId: "acc-sim"))
+
+        let result = try await service.suggestScene(
+            beatTitle: "Opening",
+            beatGuidance: "Introduce the space",
+            style: .empty,
+            characters: [],
+            previousFrames: []
+        )
+
+        #expect(result == "A simulated scene.")
+
+        guard let request = await transport.requests().first else {
+            Issue.record("Expected a captured request"); return
+        }
+
+        #expect(request.url == "https://chatgpt.com/backend-api/codex/responses")
+        #expect(request.method == "POST")
+        #expect(request.headers["Authorization"] == "Bearer tok-sim")
+        #expect(request.headers["chatgpt-account-id"] == "acc-sim")
+        #expect(request.headers["Accept"] == "text/event-stream")
+        #expect(request.headers["Content-Type"] == "application/json")
+
+        let body = try request.jsonBody()
+        #expect(body["model"] as? String == OpenAIService.codexDefaultModel)
+        #expect(body["stream"] as? Bool == true)
+        #expect(body["store"] as? Bool == false)
+    }
+
+    @Test func codexStreamingHTTPErrorPropagatesFromTransport() async {
+        let transport = RecordingOpenAITransport(
+            streamResponses: [
+                .init(statusCode: 401, lines: ["{\"detail\":\"Unauthorized\"}"])
+            ]
+        )
+        let service = OpenAIService(transport: transport)
+        await service.configure(authMode: .oauth(accessToken: "tok-sim", refreshToken: nil, accountId: "acc-sim"))
+
+        do {
+            _ = try await service.suggestScene(
+                beatTitle: "Opening",
+                beatGuidance: "Introduce the space",
+                style: .empty,
+                characters: [],
+                previousFrames: []
+            )
+            Issue.record("Should have thrown")
+        } catch let error as OpenAIService.ServiceError {
+            #expect(error == .httpError(401, "Unauthorized"))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test func platformTextCompletionUsesNonStreamingTransport() async throws {
+        let responseJSON: [String: Any] = [
+            "choices": [
+                ["message": ["content": "Platform response"]]
+            ]
+        ]
+        let transport = RecordingOpenAITransport(
+            dataResponses: [
+                .init(
+                    statusCode: 200,
+                    body: try JSONSerialization.data(withJSONObject: responseJSON)
+                )
+            ]
+        )
+        let service = OpenAIService(transport: transport)
+        await service.configure(endpoint: .platform(apiKey: "sk-platform"))
+
+        let result = try await service.suggestScene(
+            beatTitle: "Opening",
+            beatGuidance: "Introduce the space",
+            style: .empty,
+            characters: [],
+            previousFrames: []
+        )
+
+        #expect(result == "Platform response")
+
+        guard let request = await transport.requests().first else {
+            Issue.record("Expected a captured request"); return
+        }
+
+        #expect(request.url == "https://api.openai.com/v1/chat/completions")
+        #expect(request.headers["Authorization"] == "Bearer sk-platform")
+        #expect(request.headers["Accept"] == nil)
+
+        let body = try request.jsonBody()
+        #expect(body["model"] as? String == OpenAIService.platformDefaultModel)
+        #expect(body["max_tokens"] as? Int == 300)
+    }
+
+    @Test func codexImageGenerationUsesImageToolThroughTransport() async throws {
+        let imageData = Data([0x89, 0x50, 0x4E, 0x47])
+        let transport = RecordingOpenAITransport(
+            streamResponses: [
+                .init(
+                    statusCode: 200,
+                    lines: Self.completedLines(
+                        responseJSON: "{\"output\":[{\"type\":\"image_generation_call\",\"status\":\"completed\",\"result\":\"\(imageData.base64EncodedString())\"}]}"
+                    )
+                )
+            ]
+        )
+        let service = OpenAIService(transport: transport)
+        await service.configure(authMode: .oauth(accessToken: "tok-sim", refreshToken: nil, accountId: "acc-sim"))
+
+        let result = try await service.generateStyleReference(description: "Ink wash storyboard")
+        #expect(result == imageData)
+
+        guard let request = await transport.requests().first else {
+            Issue.record("Expected a captured request"); return
+        }
+
+        let body = try request.jsonBody()
+        let tools = body["tools"] as? [[String: Any]]
+        #expect(tools?.first?["type"] as? String == "image_generation")
+
+        let input = body["input"] as? [[String: Any]]
+        let content = input?.first?["content"] as? [[String: Any]]
+        let promptText = content?.first?["text"] as? String
+        #expect(promptText?.contains("Draw Generate a single reference sketch") == true)
     }
 }
 
@@ -738,5 +916,58 @@ extension OpenAIService.ServiceError: @retroactive Equatable {
         case (.imageGenerationFailed(let a), .imageGenerationFailed(let b)): return a == b
         default: return false
         }
+    }
+}
+
+private struct CapturedRequest: Sendable {
+    let url: String
+    let method: String
+    let headers: [String: String]
+    let bodyData: Data?
+
+    init(_ request: URLRequest) {
+        self.url = request.url?.absoluteString ?? ""
+        self.method = request.httpMethod ?? ""
+        self.headers = request.allHTTPHeaderFields ?? [:]
+        self.bodyData = request.httpBody
+    }
+
+    func jsonBody() throws -> [String: Any] {
+        guard let bodyData else { return [:] }
+        return try JSONSerialization.jsonObject(with: bodyData) as? [String: Any] ?? [:]
+    }
+}
+
+private actor RecordingOpenAITransport: OpenAITransport {
+    private var dataResponses: [OpenAIHTTPResponse]
+    private var streamResponses: [OpenAIHTTPStreamResponse]
+    private var capturedRequests: [CapturedRequest] = []
+
+    init(
+        dataResponses: [OpenAIHTTPResponse] = [],
+        streamResponses: [OpenAIHTTPStreamResponse] = []
+    ) {
+        self.dataResponses = dataResponses
+        self.streamResponses = streamResponses
+    }
+
+    func data(for request: URLRequest) async throws -> OpenAIHTTPResponse {
+        capturedRequests.append(CapturedRequest(request))
+        guard !dataResponses.isEmpty else {
+            return OpenAIHTTPResponse(statusCode: 500, body: Data())
+        }
+        return dataResponses.removeFirst()
+    }
+
+    func stream(for request: URLRequest) async throws -> OpenAIHTTPStreamResponse {
+        capturedRequests.append(CapturedRequest(request))
+        guard !streamResponses.isEmpty else {
+            return OpenAIHTTPStreamResponse(statusCode: 500, lines: [])
+        }
+        return streamResponses.removeFirst()
+    }
+
+    func requests() -> [CapturedRequest] {
+        capturedRequests
     }
 }

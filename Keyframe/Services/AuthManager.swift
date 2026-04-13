@@ -1,8 +1,20 @@
 import Foundation
 
+protocol KeyframeOAuthClient: Actor {
+    func startAuthorization() async throws -> OAuthService.Tokens
+    func cancel() async
+    func refreshAccessToken(refreshToken: String) async throws -> OAuthService.Tokens
+}
+
+extension OAuthService: KeyframeOAuthClient {}
+
 @MainActor
 @Observable
 final class AuthManager {
+    private static let missingAccountIdMessage =
+        OpenAIService.ServiceError.missingAccountId.errorDescription ??
+        "ChatGPT account ID not found. Please sign out and sign in again."
+
     enum Status: Equatable {
         case idle
         case authenticating
@@ -11,7 +23,11 @@ final class AuthManager {
     }
 
     var status: Status = .idle
-    private let oauthService = OAuthService()
+    private let oauthService: any KeyframeOAuthClient
+
+    init(oauthService: any KeyframeOAuthClient = OAuthService()) {
+        self.oauthService = oauthService
+    }
 
     nonisolated static func persistedOAuthValues(
         from tokens: OAuthService.Tokens,
@@ -32,7 +48,7 @@ final class AuthManager {
             let tokens = try await oauthService.startAuthorization()
             clearLegacyAPIKey()
             try KeychainService.save(Self.persistedOAuthValues(from: tokens))
-            status = .authenticated
+            _ = resolveAuthMode()
         } catch is CancellationError {
             status = .idle
         } catch {
@@ -88,7 +104,7 @@ final class AuthManager {
                     )
                 )
             )
-            status = .authenticated
+            _ = resolveAuthMode()
         } catch {
             status = .failed(error.localizedDescription)
         }
@@ -99,8 +115,14 @@ final class AuthManager {
     func resolveAuthMode() -> AuthMode {
         clearLegacyAPIKey()
         if let oauth = storedOAuthTokens() {
+            if let accountId = oauth.accountId, !accountId.isEmpty {
+                status = .authenticated
+            } else {
+                status = .failed(Self.missingAccountIdMessage)
+            }
             return .oauth(accessToken: oauth.accessToken, refreshToken: oauth.refreshToken, accountId: oauth.accountId)
         }
+        status = .idle
         return .none
     }
 

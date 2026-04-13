@@ -45,6 +45,13 @@ struct SetupFlowTests {
         #expect(state.canAdvanceToPhase(.style) == false)
     }
 
+    @Test func oauthWithEmptyAccountIdIsNotAuthenticated() {
+        let state = AppState()
+        state.authMode = .oauth(accessToken: "token", refreshToken: nil, accountId: "")
+        #expect(state.isAuthenticated == false)
+        #expect(state.canAdvanceToPhase(.style) == false)
+    }
+
     @Test func isNotAuthenticatedWithNone() {
         let state = AppState()
         #expect(state.isAuthenticated == false)

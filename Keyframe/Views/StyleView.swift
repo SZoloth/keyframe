@@ -283,6 +283,7 @@ struct StyleView: View {
         errorMessage = nil
         Task {
             do {
+                await aiProvider.prepare(authMode: appState.authMode)
                 let description = try await aiProvider.service.analyzeStyle(
                     referenceImages: appState.project.style.referenceImages
                 )
@@ -299,6 +300,7 @@ struct StyleView: View {
         errorMessage = nil
         Task {
             do {
+                await aiProvider.prepare(authMode: appState.authMode)
                 let imageData = try await aiProvider.service.generateStyleReference(
                     description: descriptionInput.trimmingCharacters(in: .whitespaces)
                 )

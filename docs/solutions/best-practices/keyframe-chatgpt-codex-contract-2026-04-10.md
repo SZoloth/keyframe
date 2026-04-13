@@ -1,10 +1,11 @@
 ---
 title: Keyframe ChatGPT Codex contract and evidence hierarchy
 date: 2026-04-10
+last_updated: 2026-04-13
 category: best-practices
 module: OpenAIService
 problem_type: best_practice
-component: contract
+component: documentation
 severity: high
 tags:
   - openai
@@ -71,6 +72,8 @@ Tests for this path must lock down four things:
 
 Inline hand-written JSON is not enough on its own. Use fixture-backed tests for captured backend errors and success streams when the backend has already proven stricter than the public docs.
 
+For the service layer, prefer injected transports and auth clients over UI-driven testing so request headers, body shape, refresh behavior, and HTTP/SSE edge cases can be proved without launching the app.
+
 ## What not to use as authority
 
 OpenInterpreter is useful as a general example of AI product UX, but it is not the contract authority for this problem. Its public docs are centered on API-key based OpenAI usage, not the ChatGPT subscription backed Codex endpoint that Keyframe depends on for this flow.
@@ -78,4 +81,5 @@ OpenInterpreter is useful as a general example of AI product UX, but it is not t
 ## Related
 
 - `docs/solutions/best-practices/chatgpt-subscription-via-codex-backend-api-2026-04-10.md`
+- `docs/solutions/developer-experience/test-chatgpt-codex-flows-without-ui-2026-04-13.md`
 - `docs/solutions/integration-issues/codex-backend-streaming-and-model-errors-2026-04-10.md`

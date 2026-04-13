@@ -1,5 +1,38 @@
 import Foundation
 
+struct OpenAIHTTPResponse: Sendable {
+    let statusCode: Int
+    let body: Data
+}
+
+struct OpenAIHTTPStreamResponse: Sendable {
+    let statusCode: Int
+    let lines: [String]
+}
+
+protocol OpenAITransport: Sendable {
+    func data(for request: URLRequest) async throws -> OpenAIHTTPResponse
+    func stream(for request: URLRequest) async throws -> OpenAIHTTPStreamResponse
+}
+
+struct URLSessionOpenAITransport: OpenAITransport {
+    func data(for request: URLRequest) async throws -> OpenAIHTTPResponse {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        return OpenAIHTTPResponse(statusCode: statusCode, body: data)
+    }
+
+    func stream(for request: URLRequest) async throws -> OpenAIHTTPStreamResponse {
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        var lines: [String] = []
+        for try await line in bytes.lines {
+            lines.append(line)
+        }
+        return OpenAIHTTPStreamResponse(statusCode: statusCode, lines: lines)
+    }
+}
+
 actor OpenAIService {
 
     enum Endpoint {
@@ -33,6 +66,11 @@ actor OpenAIService {
     }
 
     private(set) var endpoint: Endpoint?
+    private let transport: any OpenAITransport
+
+    init(transport: any OpenAITransport = URLSessionOpenAITransport()) {
+        self.transport = transport
+    }
 
     func configure(endpoint: Endpoint) {
         oauthMissingAccountId = false
@@ -523,15 +561,14 @@ actor OpenAIService {
 
     private func post(url: String, body: [String: Any], headers: [String: String]) async throws -> Data {
         let request = try buildRequest(url: url, body: body, headers: headers)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let response = try await transport.data(for: request)
 
-        if let httpResponse = response as? HTTPURLResponse,
-           !(200...299).contains(httpResponse.statusCode) {
-            let errorBody = Self.extractErrorBody(data)
-            throw ServiceError.httpError(httpResponse.statusCode, errorBody)
+        if !(200...299).contains(response.statusCode) {
+            let errorBody = Self.extractErrorBody(response.body)
+            throw ServiceError.httpError(response.statusCode, errorBody)
         }
 
-        return data
+        return response.body
     }
 
     /// POST with `stream: true` — collects SSE events, returns the `response.completed` payload.
@@ -539,22 +576,15 @@ actor OpenAIService {
         var request = try buildRequest(url: url, body: body, headers: headers)
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
 
-        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        let response = try await transport.stream(for: request)
 
-        if let httpResponse = response as? HTTPURLResponse,
-           !(200...299).contains(httpResponse.statusCode) {
-            var errorChunks = Data()
-            for try await byte in bytes { errorChunks.append(byte) }
+        if !(200...299).contains(response.statusCode) {
+            let errorChunks = response.lines.joined(separator: "\n").data(using: .utf8) ?? Data()
             let errorBody = Self.extractErrorBody(errorChunks)
-            throw ServiceError.httpError(httpResponse.statusCode, errorBody)
+            throw ServiceError.httpError(response.statusCode, errorBody)
         }
 
-        var lines: [String] = []
-        for try await line in bytes.lines {
-            lines.append(line)
-        }
-
-        return try Self.parseSSEResponse(lines: lines)
+        return try Self.parseSSEResponse(lines: response.lines)
     }
 
     /// Parse SSE event lines and extract the `response.completed` payload.

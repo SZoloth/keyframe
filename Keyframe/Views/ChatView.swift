@@ -18,6 +18,11 @@ struct ChatView: View {
     @State private var currentScene = ""
     @State private var pendingImageData: Data?
     @State private var previousFrameId: String?
+    private let requestPlaceholders = [
+        "Thinking of a scene...",
+        "Refining...",
+        "Generating image..."
+    ]
 
     var body: some View {
         let phase = appState.project.currentPhase
@@ -240,10 +245,12 @@ struct ChatView: View {
     }
 
     private func suggestScene(for frame: StoryboardFrame) {
+        let expectedFrameId = frame.id
         loading = true
         addMessage(.assistant, "Thinking of a scene...")
         Task {
             do {
+                await aiProvider.prepare(authMode: appState.authMode)
                 let completedFrames = appState.project.frames.filter { $0.status == .complete }
                 let scene = try await aiProvider.service.suggestScene(
                     beatTitle: frame.beatTitle,
@@ -252,56 +259,69 @@ struct ChatView: View {
                     characters: appState.project.characters,
                     previousFrames: completedFrames
                 )
+                guard appState.selectedFrameId == expectedFrameId else { return }
                 currentScene = scene
-                messages.removeLast()
+                removePendingPlaceholderIfPresent()
                 addMessage(.assistant, scene)
             } catch {
-                messages.removeLast()
+                guard appState.selectedFrameId == expectedFrameId else { return }
+                removePendingPlaceholderIfPresent()
                 addMessage(.assistant, "Failed to suggest a scene: \(error.localizedDescription)")
             }
+            guard appState.selectedFrameId == expectedFrameId else { return }
             loading = false
         }
     }
 
     private func refineScene(with feedback: String) {
+        guard let expectedFrameId = appState.selectedFrameId else { return }
         loading = true
         addMessage(.assistant, "Refining...")
         Task {
             do {
+                await aiProvider.prepare(authMode: appState.authMode)
                 let refined = try await aiProvider.service.refineScene(
                     currentScene: currentScene,
                     userFeedback: feedback,
                     style: appState.project.style,
                     characters: appState.project.characters
                 )
+                guard appState.selectedFrameId == expectedFrameId else { return }
                 currentScene = refined
-                messages.removeLast()
+                removePendingPlaceholderIfPresent()
                 addMessage(.assistant, refined)
             } catch {
-                messages.removeLast()
+                guard appState.selectedFrameId == expectedFrameId else { return }
+                removePendingPlaceholderIfPresent()
                 addMessage(.assistant, "Refinement failed: \(error.localizedDescription)")
             }
+            guard appState.selectedFrameId == expectedFrameId else { return }
             loading = false
         }
     }
 
     private func generateImage(for frame: StoryboardFrame) {
+        let expectedFrameId = frame.id
         loading = true
         addMessage(.assistant, "Generating image...")
         Task {
             do {
+                await aiProvider.prepare(authMode: appState.authMode)
                 let imageData = try await aiProvider.service.generateFrameImage(
                     sceneDescription: currentScene,
                     style: appState.project.style,
                     characters: appState.project.characters
                 )
+                guard appState.selectedFrameId == expectedFrameId else { return }
                 pendingImageData = imageData
-                messages.removeLast()
+                removePendingPlaceholderIfPresent()
                 addMessage(.assistant, "Here's what I came up with:", imageData: imageData)
             } catch {
-                messages.removeLast()
+                guard appState.selectedFrameId == expectedFrameId else { return }
+                removePendingPlaceholderIfPresent()
                 addMessage(.assistant, "Image generation failed: \(error.localizedDescription)")
             }
+            guard appState.selectedFrameId == expectedFrameId else { return }
             loading = false
         }
     }
@@ -326,5 +346,13 @@ struct ChatView: View {
         messages = []
         currentScene = frame?.sceneDescription ?? ""
         pendingImageData = nil
+        loading = false
+    }
+
+    private func removePendingPlaceholderIfPresent() {
+        guard let last = messages.last else { return }
+        guard last.role == .assistant, last.imageData == nil else { return }
+        guard requestPlaceholders.contains(last.content) else { return }
+        messages.removeLast()
     }
 }

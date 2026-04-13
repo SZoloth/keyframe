@@ -3,6 +3,23 @@ import Network
 import CryptoKit
 import AppKit
 
+struct OAuthHTTPResponse: Sendable {
+    let statusCode: Int
+    let body: Data
+}
+
+protocol OAuthTransport: Sendable {
+    func data(for request: URLRequest) async throws -> OAuthHTTPResponse
+}
+
+struct URLSessionOAuthTransport: OAuthTransport {
+    func data(for request: URLRequest) async throws -> OAuthHTTPResponse {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        return OAuthHTTPResponse(statusCode: statusCode, body: data)
+    }
+}
+
 actor OAuthService {
     struct Config {
         var clientId = "app_EMoamEEZ73f0CkXaXp7hrann"
@@ -42,11 +59,16 @@ actor OAuthService {
     }
 
     private let config: Config
+    private let transport: any OAuthTransport
     private var listener: NWListener?
     private var authContinuation: CheckedContinuation<String, any Error>?
 
-    init(config: Config = Config()) {
+    init(
+        config: Config = Config(),
+        transport: any OAuthTransport = URLSessionOAuthTransport()
+    ) {
         self.config = config
+        self.transport = transport
     }
 
     // MARK: - PKCE
@@ -234,15 +256,14 @@ actor OAuthService {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let response = try await transport.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+        guard (200...299).contains(response.statusCode) else {
+            let errorBody = String(data: response.body, encoding: .utf8) ?? "Unknown error"
             throw OAuthError.tokenExchangeFailed(errorBody)
         }
 
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        let json = try JSONSerialization.jsonObject(with: response.body) as? [String: Any] ?? [:]
 
         guard let accessToken = json["access_token"] as? String else {
             throw OAuthError.tokenExchangeFailed("No access_token in response")
@@ -303,15 +324,14 @@ actor OAuthService {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let response = try await transport.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+        guard (200...299).contains(response.statusCode) else {
+            let errorBody = String(data: response.body, encoding: .utf8) ?? "Unknown error"
             throw OAuthError.tokenExchangeFailed(errorBody)
         }
 
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        let json = try JSONSerialization.jsonObject(with: response.body) as? [String: Any] ?? [:]
 
         guard let accessToken = json["access_token"] as? String else {
             throw OAuthError.tokenExchangeFailed("No access_token in refresh response")

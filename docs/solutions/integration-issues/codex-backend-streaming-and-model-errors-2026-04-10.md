@@ -1,6 +1,7 @@
 ---
 title: Codex Backend API rejects stream:false and gpt-4o model
 date: 2026-04-10
+last_updated: 2026-04-13
 category: integration-issues
 module: OpenAIService
 problem_type: integration_issue
@@ -98,7 +99,7 @@ static func parseSSEResponse(lines: [String]) throws -> Data {
 }
 ```
 
-The `postStreaming` method collects all SSE lines from `URLSession.shared.bytes(for:)` and passes them to `parseSSEResponse`, whose output is compatible with the existing `extractTextFromResponsesAPI` and `extractImageFromResponsesAPI` methods.
+The `postStreaming` method delegates HTTP execution to an injected transport, which collects SSE lines in production and can replay captured streams in tests. Those lines pass through `parseSSEResponse`, whose output stays compatible with the existing `extractTextFromResponsesAPI` and `extractImageFromResponsesAPI` methods.
 
 ## Why This Works
 
@@ -118,8 +119,10 @@ The `response.completed` SSE event contains the full response JSON, so the downs
 - 8 SSE parsing tests cover text extraction, image extraction, large payloads, nested `item` structures, empty streams, and event priority (`response.completed` over `output_item.done`)
 - End-to-end tests walk through the full OAuth → codexBackend routing → SSE parsing → frame completion flow
 - The `parseSSEResponse` method is a static function, testable without network calls
+- Transport-level simulations assert request headers, body shape, HTTP error propagation, and streamed response handling without launching the app UI
 
 ## Related Issues
 
 - `docs/solutions/best-practices/chatgpt-subscription-via-codex-backend-api-2026-04-10.md` — updated with corrected streaming and model guidance
+- `docs/solutions/developer-experience/test-chatgpt-codex-flows-without-ui-2026-04-13.md` — service-level simulation pattern that now guards this contract
 - `docs/solutions/integration-issues/openai-image-url-expiration-2026-04-10.md` — related b64_json pattern for image persistence

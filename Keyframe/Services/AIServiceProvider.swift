@@ -6,7 +6,11 @@ import Observation
 final class AIServiceProvider {
     let service = OpenAIService()
 
+    func prepare(authMode: AuthMode) async {
+        await service.configure(authMode: authMode)
+    }
+
     func configure(authMode: AuthMode) {
-        Task { await service.configure(authMode: authMode) }
+        Task { await prepare(authMode: authMode) }
     }
 }
